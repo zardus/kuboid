@@ -6,7 +6,7 @@ STATUS_FILTERS=( )
 AWK_FILTER='{print$1}' 
 EXTRA_ARGS=${EXTRA_ARGS-}
 
-while getopts "spcrfow" OPT
+while getopts "spcrfeow" OPT
 do
 	case $OPT in
 		s)
@@ -23,6 +23,9 @@ do
 			;;
 		f)
 			STATUS_FILTERS+=(Failed)
+			;;
+		e)
+			STATUS_FILTERS+=(Error)
 			;;
 		o)
 			STATUS_FILTERS+=(OOMKilled)
