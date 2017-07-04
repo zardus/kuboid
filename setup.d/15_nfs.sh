@@ -8,7 +8,7 @@ fi
 
 if [ "$RESULT_DEST" == "gce" ]
 then
-	NFS_SERVER=$(kubectl get services -n $EXPERIMENT | tail -n1 | awk '{print $2}')
+	NFS_SERVER=$(kubectl get services -n workbench-util | grep $GCE_DISK_NAME | awk '{print $2}')
 	NFS_PATH=/exports/results
 fi
 
@@ -47,5 +47,7 @@ END
 
 kubectl delete -n $EXPERIMENT -f $WORKDIR/setup/nfs_pv.yml || echo "[+] No PV to delete..."
 kubectl delete -n $EXPERIMENT -f $WORKDIR/setup/nfs_pvc.yml || echo "[+] No PVC to delete..."
+echo "[+] Creating PV..."
 kubectl create -n $EXPERIMENT -f $WORKDIR/setup/nfs_pv.yml
+echo "[+] Creating PVC..."
 kubectl create -n $EXPERIMENT -f $WORKDIR/setup/nfs_pvc.yml

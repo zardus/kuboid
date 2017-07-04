@@ -12,18 +12,19 @@ cat <<END > $WORKDIR/setup/gce_nfs_rc.yml
 apiVersion: v1
 kind: ReplicationController
 metadata:
-  name: nfs-server
+  name: nfs-server-$GCE_DISK_NAME
+  namespace: workbench-util
 spec:
   replicas: 1
   selector:
-    role: nfs-server
+    role: nfs-server-$GCE_DISK_NAME
   template:
     metadata:
       labels:
-        role: nfs-server
+        role: nfs-server-$GCE_DISK_NAME
     spec:
       containers:
-      - name: nfs-server
+      - name: nfs-server-$GCE_DISK_NAME
         image: gcr.io/google-samples/nfs-server:1.1
         ports:
           - name: nfs
@@ -48,8 +49,8 @@ cat <<END > $WORKDIR/setup/gce_nfs_service.yml
 kind: Service
 apiVersion: v1
 metadata:
-  name: nfs-service
-  namespace: $EXPERIMENT
+  name: nfs-service-$GCE_DISK_NAME
+  namespace: workbench-util
 spec:
   ports:
     - name: nfs
@@ -59,10 +60,10 @@ spec:
     - name: rpcbind
       port: 111
   selector:
-    role: nfs-server
+    role: nfs-server-$GCE_DISK_NAME
 END
 
-kubectl delete -n $EXPERIMENT -f $WORKDIR/setup/gce_nfs_rc.yml || echo "[+] No NFS RC to delete..."
-kubectl delete -n $EXPERIMENT -f $WORKDIR/setup/gce_nfs_service.yml || echo "[+] No NFS service to delete..."
-kubectl create -n $EXPERIMENT -f $WORKDIR/setup/gce_nfs_rc.yml
-kubectl create -n $EXPERIMENT -f $WORKDIR/setup/gce_nfs_service.yml
+#kubectl delete -f $WORKDIR/setup/gce_nfs_rc.yml || echo "[+] No NFS RC to delete..."
+#kubectl delete -f $WORKDIR/setup/gce_nfs_service.yml || echo "[+] No NFS service to delete..."
+kubectl create -f $WORKDIR/setup/gce_nfs_rc.yml || echo "[+] NFS RC already existed..."
+kubectl create -f $WORKDIR/setup/gce_nfs_service.yml || echo "[+] NFS service already existed..."

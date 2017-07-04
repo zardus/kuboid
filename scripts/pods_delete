@@ -1,0 +1,4 @@
+#!/bin/bash -eu
+
+JOBS=${JOBS-100}
+parallel -j$JOBS kubectl delete pod {} -n $EXPERIMENT

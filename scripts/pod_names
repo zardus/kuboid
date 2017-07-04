@@ -1,0 +1,41 @@
+#!/bin/bash -eu
+
+function join_by { local IFS="$1"; shift; echo "$*"; }
+
+STATUS_FILTERS=( )
+
+while getopts "spcrfo" OPT
+do
+	case $OPT in
+		s)
+			STATUS_FILTERS+=(Successful)
+			;;
+		p)
+			STATUS_FILTERS+=(Pending)
+			;;
+		c)
+			STATUS_FILTERS+=(ContainerCreating)
+			;;
+		r)
+			STATUS_FILTERS+=(Running)
+			;;
+		f)
+			STATUS_FILTERS+=(Failed)
+			;;
+		o)
+			STATUS_FILTERS+=(OOMKilled)
+			;;
+	esac
+done
+
+if [ ${#STATUS_FILTERS[@]} -eq 0 ]
+then
+	STATUS_REGEX=".*"
+else
+	STATUS_REGEX=" ($(join_by \| "${STATUS_FILTERS[@]}")) "
+fi
+
+HOST_REGEX=${@:$OPTIND:1}
+[ -z "$HOST_REGEX" ] && HOST_REGEX=".*"
+
+kubectl get pods -n $EXPERIMENT -a | tail -n+2 | grep -E "$STATUS_REGEX" | awk '{print $1}' | grep -E "$HOST_REGEX"

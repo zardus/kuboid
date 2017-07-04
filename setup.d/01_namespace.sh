@@ -8,4 +8,13 @@ metadata:
     name: $EXPERIMENT
 END
 
+cat <<END > $WORKDIR/setup/namespace-util.yml
+kind: Namespace
+metadata:
+  name: workbench-util
+  labels:
+    name: workbench-util
+END
+
 kubectl create -f $WORKDIR/setup/namespace.yml || echo "[+] Namespace already exists?"
+kubectl create -f $WORKDIR/setup/namespace-util.yml || echo "[+] Util namespace already exists?"

@@ -1,0 +1,8 @@
+#!/bin/bash -eu
+
+POD=$1
+START_TIME=$(kubectl describe pod $POD | grep "Started:" | sed -e "s/.*\t//")
+SECONDS=$(date -d "$START_TIME" +%s)
+NOW=$(date +%s)
+RUNTIME=$(($NOW - $SECONDS))
+printf "%s %02d:%02d:%02d\n" $POD $(($RUNTIME / 3600)) $((($RUNTIME / 60) % 60)) $(($RUNTIME % 60))
