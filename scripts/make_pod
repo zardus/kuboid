@@ -1,29 +1,7 @@
 #!/bin/bash -eu
 
-function usage
-{
-        cat <<END
-Usage: $0 POD_NAME
-END
-        exit 1
-}
-
 POD_NAME=$(echo $1 | $WORKBENCH_DIR/scripts/kubesanitize)
-
-while getopts "m:c:" opt
-do
-        case $OPT in
-                m)
-                        MEMORY=$OPTARG
-                        ;;
-                n)
-                        CPU=$OPTARG
-                        ;;
-                *)
-                        usage
-                        ;;
-        esac
-done
+POD_CMD=$2
 
 mkdir -p $WORKDIR/pods
 PODPATH=$WORKDIR/pods/$POD_NAME.yml
@@ -38,8 +16,9 @@ spec:
   containers:
     - name: $POD_NAME
       command:
-        - /bin/bash
-        - -i
+        - "/bin/bash"
+        - "-c"
+        - "$POD_CMD"
       image: $DOCKER_IMG
       imagePullPolicy: Always
       stdin: true

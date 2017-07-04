@@ -21,7 +21,7 @@ source experiments/science/config
 scripts/make_experiment
 
 # EXPERIMENT
-cat your_dataset | parallel scripts/make_pod {}
+cat your_dataset | parallel scripts/make_pod {} "/docker/path/to/testit.py --something={}"
 
 # GO FASTER - ramp up to 16 instances!
 scripts/gce_resize seagull preemptible-memory-32 16
@@ -51,5 +51,5 @@ Additionally, code here can be mined for useful snippets:
 
 # Caveats
 
-Currently, `scripts/make_pod` needs to be manually customized to launch the command you want to launch.
-This will be configurable in the future (probably via $2 to `make_pod`).
+Be careful of GCE usage -- it's easy to rack up a big bill.
+`scripts/gce_list` is helpful to quickly see what's running, but you're on your own there!
