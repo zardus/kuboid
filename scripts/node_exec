@@ -2,4 +2,10 @@
 
 NODE=$1
 shift
-gcloud compute ssh $NODE --command="$1"
+
+if [[ $NODE == gke-* ]]
+then
+	gcloud compute ssh $NODE --command="$1"
+else
+	ssh $NODE "$1"
+fi
