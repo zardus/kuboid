@@ -1,5 +1,1 @@
-#!/bin/bash -eu
-
-JOBS=${JOBS-100}
-WORKBENCH_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-parallel -j$JOBS -k $WORKBENCH_DIR/scripts/pod_runtime {}
+workbench_parallel_helper

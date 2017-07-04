@@ -1,5 +1,1 @@
-#!/bin/bash -eu
-
-JOBS=${JOBS-100}
-WORKBENCH_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-parallel -v -j$JOBS $WORKBENCH_DIR/scripts/node_exec {} "\"$1\""
+workbench_parallel_helper
