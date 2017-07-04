@@ -6,7 +6,7 @@ STATUS_FILTERS=( )
 AWK_FILTER='{print$1}' 
 EXTRA_ARGS=${EXTRA_ARGS-}
 
-while getopts "spcrfeow" OPT
+while getopts "spcCrfeow" OPT
 do
 	case $OPT in
 		s)
@@ -15,8 +15,11 @@ do
 		p)
 			STATUS_FILTERS+=(Pending)
 			;;
-		c)
+		C)
 			STATUS_FILTERS+=(ContainerCreating)
+			;;
+		c)
+			STATUS_FILTERS+=(Completed)
 			;;
 		r)
 			STATUS_FILTERS+=(Running)
