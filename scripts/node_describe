@@ -1,0 +1,3 @@
+#!/bin/bash -eu
+
+kubectl describe node $1

@@ -1,0 +1,3 @@
+#!/bin/bash -eu
+
+kubectl describe pod $1 -n $EXPERIMENT
