@@ -1,0 +1,5 @@
+#!/bin/bash -eu
+
+POD=$1
+shift
+kubectl exec $POD -n $EXPERIMENT -i -- bash -c "$1"

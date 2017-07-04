@@ -3,8 +3,10 @@
 function join_by { local IFS="$1"; shift; echo "$*"; }
 
 STATUS_FILTERS=( )
+AWK_FILTER='{print$1}' 
+EXTRA_ARGS=${EXTRA_ARGS-}
 
-while getopts "spcrfo" OPT
+while getopts "spcrfow" OPT
 do
 	case $OPT in
 		s)
@@ -25,6 +27,10 @@ do
 		o)
 			STATUS_FILTERS+=(OOMKilled)
 			;;
+		w)
+			AWK_FILTER='{print}'
+			EXTRA_ARGS='-owide'
+			;;
 	esac
 done
 
@@ -38,4 +44,4 @@ fi
 HOST_REGEX=${@:$OPTIND:1}
 [ -z "$HOST_REGEX" ] && HOST_REGEX=".*"
 
-kubectl get pods -n $EXPERIMENT -a | tail -n+2 | grep -E "$STATUS_REGEX" | awk '{print $1}' | grep -E "$HOST_REGEX"
+kubectl get pods -n $EXPERIMENT -a $EXTRA_ARGS | tail -n+2 | grep -E "$STATUS_REGEX" | awk $AWK_FILTER | grep -E "$HOST_REGEX"

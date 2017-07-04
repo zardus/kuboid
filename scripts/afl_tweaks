@@ -1,0 +1,4 @@
+#!/bin/bash -eu
+
+WORKBENCH_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+$WORKBENCH_DIR/scripts/node_names | $WORKBENCH_DIR/scripts/nodes_exec "echo 1 | sudo tee /proc/sys/kernel/sched_child_runs_first"
