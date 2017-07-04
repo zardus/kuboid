@@ -1,0 +1,8 @@
+#!/bin/bash
+
+GCE_CLUSTER_NAME=${1-seagull}
+GCE_POOL_NAME=${2-memory-pool}
+GCE_CLUSTER_SIZE=${3-0}
+
+echo "[*] Resizing cluster $GCE_CLUSTER_NAME to $GCE_CLUSTER_SIZE nodes (from pool $GCE_POOL_NAME)"
+yes | gcloud container clusters resize $GCE_CLUSTER_NAME --node-pool=$GCE_POOL_NAME --size=$GCE_CLUSTER_SIZE

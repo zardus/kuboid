@@ -1,0 +1,9 @@
+#!/bin/bash -eu
+
+for SCRIPT in $WORKBENCH_DIR/teardown.d/*
+do
+	echo "[*] Running $SCRIPT."
+	$SCRIPT
+done
+
+echo "[*] Experiment teardown complete!"

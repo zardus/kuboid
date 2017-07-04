@@ -1,0 +1,123 @@
+#!/bin/bash -e
+
+function usage
+{
+	cat <<END
+Usage: $0 EXPERIMENT [options]
+
+Options:
+	-k /path/to/KUBECONFIG			Copy in custom kube config file.
+	-n NFS_SERVER:NFS_PATH			Set up an NFS volume in kubernetes.
+	-g GCE_DISK_NAME[:GCE_DISK_SIZE]	Use a persistent google disk for results (default size 200GB).
+	-d DOCKER_IMG				Name of the docker image to use.
+	-s DOCKER_USER:DOCKER_PASS		Docker registry credentials.
+	-m MEMORY_REQUEST			Memory request for the pods.
+	-c CORES_REQUEST			CPU request for the pods.
+	-M MEMORY_LIMIT				Memory limit for the pods.
+	-C CORES_LIMIT				CPU limit for the pods.
+
+All options can also be specified through the environment (by their value names above).
+END
+
+	exit 1
+}
+
+if [ $# -lt 1 ]
+then
+	usage
+fi
+
+EXPERIMENT=$1
+shift
+
+WORKBENCH_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+WORKDIR=$WORKBENCH_DIR/experiments/$EXPERIMENT
+
+# defaults
+DOCKER_IMG=${DOCKER_IMG-ubuntu}
+RESULT_DEST=${RESULT_DEST-none}
+MEMORY_REQUEST=${MEMORY_REQUEST-1Gi}
+MEMORY_LIMIT=${MEMORY_LIMIT-1Gi}
+CPU_REQUEST=${CPU_REQUEST-1000m}
+CPU_LIMIT=${CPU_LIMIT-1000m}
+GCE_DISK_SIZE=${GCE_DISK_SIZE-200GB}
+RESULT_DEST=${RESULT_DEST-none}
+
+while getopts "k:n:g:d:m:M:c:C:s:" OPT
+do
+	case $OPT in
+		k)
+			KUBECONFIG=$OPTARG
+			;;
+		n)
+			RESULT_DEST=nfs
+			NFS_SERVER=${OPTARG%%:*}
+			NFS_PATH=${OPTARG##*:}
+			;;
+		g)
+			RESULT_DEST=gce
+			GCE_DISK_NAME=${OPTARG%%:*}
+			GCE_DISK_SIZE=${OPTARG##*:}
+			;;
+		d)
+			DOCKER_IMG=$OPTARG
+			;;
+		s)
+			slashes="${DOCKER_IMG//[^\/]}"
+			[ ${#slashes} -eq 2 ] && DOCKER_SERVER=${DOCKER_IMG%%/*}
+			DOCKER_USER=${OPTARG%%:*}
+			DOCKER_PASS=${OPTARG##*:}
+			;;
+		m)
+			MEMORY_REQUEST=$OPTARG
+			;;
+		c)
+			CPU_REQUEST=$OPTARG
+			;;
+		M)
+			MEMORY_LIMIT=$OPTARG
+			;;
+		C)
+			CPU_LIMIT=$OPTARG
+			;;
+		*)
+			usage
+			;;
+	esac
+done
+
+echo "[*] Creating experiment $EXPERIMENT"
+
+mkdir -p $WORKDIR
+ENVFILE=$WORKDIR/config
+cat <<END >$ENVFILE
+export WORKDIR=$WORKDIR
+export EXPERIMENT=$EXPERIMENT
+export WORKBENCH_DIR=$WORKBENCH_DIR
+
+# pod configuration
+export DOCKER_IMG=$DOCKER_IMG
+export MEMORY_REQUEST=$MEMORY_REQUEST
+export MEMORY_LIMIT=$MEMORY_LIMIT
+export CPU_REQUEST=$CPU_REQUEST
+export CPU_LIMIT=$CPU_LIMIT
+
+export RESULT_DEST=$RESULT_DEST
+END
+
+[ "$RESULT_DEST" == "nfs" ] && cat <<END>>$ENVFILE
+export NFS_SERVER=$NFS_SERVER
+export NFS_PATH=$NFS_PATH
+END
+[ "$RESULT_DEST" == "gce" ] && cat <<END>>$ENVFILE
+export GCE_DISK_NAME=$GCE_DISK_NAME
+export GCE_DISK_SIZE=$GCE_DISK_SIZE
+END
+[ -n "$KUBECONFIG" ] && echo "export KUBECONFIG=$KUBECONFIG" >>$ENVFILE
+[ -n "$DOCKER_SERVER" ] && echo "export DOCKER_SERVER=$DOCKER_SERVER" >>$ENVFILE
+[ -n "$DOCKER_USER" ] && cat <<END>>$ENVFILE
+export DOCKER_USER=$DOCKER_USER
+export DOCKER_PASS=$DOCKER_PASS
+END
+
+echo "[+] Experiment configuration complete!"

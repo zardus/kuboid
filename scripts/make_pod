@@ -1,0 +1,82 @@
+#!/bin/bash -eu
+
+function usage
+{
+        cat <<END
+Usage: $0 POD_NAME
+END
+        exit 1
+}
+
+POD_NAME=$(echo $1 | $WORKBENCH_DIR/scripts/kubesanitize)
+
+while getopts "m:c:" opt
+do
+        case $OPT in
+                m)
+                        MEMORY=$OPTARG
+                        ;;
+                n)
+                        CPU=$OPTARG
+                        ;;
+                *)
+                        usage
+                        ;;
+        esac
+done
+
+mkdir -p $WORKDIR/pods
+PODPATH=$WORKDIR/pods/$POD_NAME.yml
+
+cat <<END >$PODPATH
+apiVersion: v1
+kind: Pod
+metadata:
+  name: $POD_NAME
+  namespace: $EXPERIMENT
+spec:
+  containers:
+    - name: $POD_NAME
+      command:
+        - /bin/bash
+        - -i
+      image: $DOCKER_IMG
+      imagePullPolicy: Always
+      stdin: true
+      tty: true
+      volumeMounts:
+        - name: results
+          mountPath: "/results"
+      resources:
+        limits:
+          cpu: $CPU_LIMIT
+          memory: $MEMORY_LIMIT
+        requests:
+          cpu: $CPU_REQUEST
+          memory: $MEMORY_REQUEST
+  restartPolicy: Never
+  imagePullSecrets:
+    - name: docker-secret
+  volumes:
+  - name: results
+END
+
+if [ "$RESULT_DEST" == "nfs" -o "$RESULT_DEST" == "gce" ]
+then
+	cat <<END >>$PODPATH
+    persistentVolumeClaim:
+      claimName: $EXPERIMENT-nfs
+END
+else
+	cat <<END >>$PODPATH
+    emptyDir: {}
+END
+fi
+
+#[ "$RESULT_DEST" == "gce" ] && cat <<END >>$PODPATH
+#    gcePersistentDisk:
+#      pdName: $GCE_DISK_NAME
+#      fsType: ext4
+#END
+
+kubectl create -f $PODPATH
