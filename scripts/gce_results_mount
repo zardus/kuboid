@@ -1,4 +1,4 @@
-#!/bin/bash -eux
+#!/bin/bash -eu
 
 RESULT_INSTANCE=$(gcloud compute disks describe $GCE_DISK_NAME | grep -A1 users | tail -n1 | sed -e s=.*/==)
 

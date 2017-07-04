@@ -36,7 +36,7 @@ pod_names -r | pods_exec "hostname; ps -a"   # execute commands on all running p
 
 # Retrieve results from your shared drive, if that's how you roll
 mkdir /tmp/results
-scripts/gce_mount_results /tmp/results
+scripts/gce_results_mount /tmp/results
 cat /tmp/results/AWESOME_RESULTS
 
 # Stop the experiment
