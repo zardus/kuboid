@@ -1,0 +1,6 @@
+#!/bin/bash -e
+
+HOST_REGEX=$1
+[ -z "$HOST_REGEX" ] && HOST_REGEX=".*"
+
+kubectl get nodes | tail -n+2 | awk '{print $1}' | grep -E "$HOST_REGEX"

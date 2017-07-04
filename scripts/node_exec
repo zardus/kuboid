@@ -1,0 +1,5 @@
+#!/bin/bash -eu
+
+NODE=$1
+shift
+gcloud compute ssh $NODE --command="$1"
