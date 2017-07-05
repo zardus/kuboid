@@ -1,5 +1,1 @@
-#!/bin/bash -e
-
-JOBS=${JOBS-100}
-SINGULAR_SCRIPT=$(echo $0 | sed -e "s/pods_/pod_/" | sed -e "s/nodes_/node_/g")
-parallel -j$JOBS -k "$SINGULAR_SCRIPT {} \"$1\""
+workbench_parallel_helper
