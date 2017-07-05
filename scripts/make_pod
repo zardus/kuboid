@@ -1,7 +1,36 @@
 #!/bin/bash -eu
 
-POD_NAME=$(echo $1 | $WORKBENCH_DIR/scripts/kubesanitize)
-POD_CMD=$2
+function usage
+{
+	cat <<END
+$0 [-c CPU_REQUEST] [-C CPU_LIMIT] [-m MEMORY_REQUEST] [-M MEMORY_LIMIT] POD_NAME "COMMAND"
+END
+}
+
+while getopts "c:C:m:M:" OPT
+do
+	case $OPT in
+		c)
+			CPU_REQUEST=$OPTARG
+			;;
+		C)
+			CPU_LIMIT=$OPTARG
+			;;
+		m)
+			MEMORY_REQUEST=$OPTARG
+			;;
+		M)
+			MEMORY_LIMIT=$OPTARG
+			;;
+		*)
+			usage
+			;;
+	esac
+
+done
+
+POD_NAME=$(echo ${@:$OPTIND:1} | $WORKBENCH_DIR/scripts/kubesanitize)
+POD_CMD=${@:$(($OPTIND+1)):1}
 
 mkdir -p $WORKDIR/pods
 PODPATH=$WORKDIR/pods/$POD_NAME.yml
