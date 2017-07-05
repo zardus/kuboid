@@ -1,0 +1,58 @@
+#!/bin/bash -eu
+
+AFL_TWEAKS=0
+
+function usage
+{
+	cat <<END
+$0 [-a]
+
+Options:
+	-a		Make sure nodes have AFL kernel tweaks applied.
+END
+	exit 1
+}
+
+while getopts "a" OPT
+do
+	case $OPT in
+		a)
+			AFL_TWEAKS=1
+			;;
+		*)
+			usage
+			;;
+	esac
+done
+
+WORKBENCH_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+SCRIPT_DIR=$WORKBENCH_DIR/scripts
+KNOWN_NODES=""
+
+echo "[*] Engaging monitor loop."
+while true
+do
+	# check for new nodes
+	NODES_CHANGED=0
+	PREV_NODES=$KNOWN_NODES
+	KNOWN_NODES=$($SCRIPT_DIR/node_names)
+	if [ "$PREV_NODES" != "$KNOWN_NODES" ]
+	then
+		echo "[*] New nodes identified!"
+		echo "[+] Old nodes: $PREV_NODES"
+		echo "[+] New nodes: $KNOWN_NODES"
+		NODES_CHANGED=1
+	fi
+
+	if [ $AFL_TWEAKS -eq 1 -a $NODES_CHANGED -eq 1 ]
+	then
+		echo "[*] Applying AFL tweaks to nodes."
+		set +e
+		$SCRIPT_DIR/afl_tweaks 2>&1 | grep -v "^1$"
+		set -e
+		echo "[*] AFL tweaks applied."
+	fi
+
+	#echo "[*] Sleeping for 5 seconds..."
+	#sleep 5
+done
