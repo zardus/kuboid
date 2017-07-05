@@ -3,11 +3,13 @@
 function usage
 {
 	cat <<END
-$0 [-c CPU_REQUEST] [-C CPU_LIMIT] [-m MEMORY_REQUEST] [-M MEMORY_LIMIT] POD_NAME "COMMAND"
+$0 [-c CPU_REQUEST] [-C CPU_LIMIT] [-m MEMORY_REQUEST] [-M MEMORY_LIMIT] [ -l ] POD_NAME "COMMAND"
 END
 }
 
-while getopts "c:C:m:M:" OPT
+CHECK_LOG=${CHECK_LOG:-0}
+
+while getopts "c:C:m:M:l" OPT
 do
 	case $OPT in
 		c)
@@ -22,6 +24,9 @@ do
 		M)
 			MEMORY_LIMIT=$OPTARG
 			;;
+		l)
+			CHECK_LOG=1
+			;;
 		*)
 			usage
 			;;
@@ -31,6 +36,12 @@ done
 
 POD_NAME=$(echo ${@:$OPTIND:1} | $WORKBENCH_DIR/scripts/kubesanitize)
 POD_CMD=${@:$(($OPTIND+1)):1}
+
+if [ $CHECK_LOG -eq 1 -a -f $WORKDIR/logs/$POD_NAME.log ]
+then
+	echo "[*] Skipping $POD_NAME creation because the completion log is already there."
+	exit
+fi
 
 mkdir -p $WORKDIR/pods
 PODPATH=$WORKDIR/pods/$POD_NAME.yml
