@@ -6,7 +6,7 @@ STATUS_FILTERS=( )
 AWK_FILTER='{print$1}' 
 EXTRA_ARGS=${EXTRA_ARGS-}
 
-while getopts "spcCrfeow" OPT
+while getopts "spcCrfeEow" OPT
 do
 	case $OPT in
 		s)
@@ -29,6 +29,9 @@ do
 			;;
 		e)
 			STATUS_FILTERS+=(Error)
+			;;
+		E)
+			STATUS_FILTERS+=(ErrImagePull)
 			;;
 		o)
 			STATUS_FILTERS+=(OOMKilled)
