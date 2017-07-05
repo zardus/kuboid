@@ -63,7 +63,7 @@ do
 		mkdir -p $WORKDIR/logs
 		ls $WORKDIR/logs | sed -e "s/\.log$//" > /tmp/$$-logged-pods
 		# cat is here to avoid the failed grep
-		pod_names -ce | grep -v -f /tmp/$$-logged-pods | cat > /tmp/$$-new-pods 
+		pod_names -c | grep -v -f /tmp/$$-logged-pods | cat > /tmp/$$-new-pods 
 		NEW_COUNT=$(cat /tmp/$$-new-pods | wc -l)
 
 		if [ $NEW_COUNT -gt 0 ]
