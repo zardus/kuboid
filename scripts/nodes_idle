@@ -1,0 +1,4 @@
+#!/bin/bash -eu
+
+nodes_used > /tmp/$$-nodes-used
+node_names | grep -v -f /tmp/$$-nodes-used | cat

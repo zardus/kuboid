@@ -1,0 +1,5 @@
+#!/bin/bash
+
+ARG=${1--rC}
+
+pod_names $ARG -w | awk '{print$7}' | sort -u
