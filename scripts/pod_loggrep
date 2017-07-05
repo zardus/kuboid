@@ -1,0 +1,6 @@
+#!/bin/bash -eu
+
+if kubectl logs $1 -n $EXPERIMENT 2>&1 | grep -q -E "$2"
+then
+	echo $1
+fi
