@@ -5,8 +5,9 @@ function join_by { local IFS="$1"; shift; echo "$*"; }
 STATUS_FILTERS=( )
 AWK_FILTER='{print$1}' 
 EXTRA_ARGS=${EXTRA_ARGS-}
+UTILS=0
 
-while getopts "spcCrfeEow" OPT
+while getopts "spcCrfeEuUow" OPT
 do
 	case $OPT in
 		s)
@@ -33,6 +34,12 @@ do
 		E)
 			STATUS_FILTERS+=(ErrImagePull)
 			;;
+		u)
+			STATUS_FILTERS+=(Unknown)
+			;;
+		U)
+			UTILS=1
+			;;
 		o)
 			STATUS_FILTERS+=(OOMKilled)
 			;;
@@ -53,4 +60,7 @@ fi
 HOST_REGEX=${@:$OPTIND:1}
 [ -z "$HOST_REGEX" ] && HOST_REGEX=".*"
 
-kubectl get pods -n $EXPERIMENT -a $EXTRA_ARGS | tail -n+2 | grep -E "$STATUS_REGEX" | awk $AWK_FILTER | grep -E "$HOST_REGEX"
+(
+	kubectl get pods -n $EXPERIMENT -a $EXTRA_ARGS | tail -n+2
+	[ $UTILS -eq 1 ] && kubectl get pods -n workbench-util -a $EXTRA_ARGS | tail -n+2
+) | grep -E "$STATUS_REGEX" | awk $AWK_FILTER | grep -E "$HOST_REGEX"
