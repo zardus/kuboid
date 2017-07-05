@@ -25,6 +25,8 @@ cat your_dataset | parallel scripts/make_pod {} "/docker/path/to/testit.py --som
 
 # GO FASTER - ramp up to 16 instances!
 scripts/gce_resize seagull preemptible-memory-32 16
+# Or, alternatively, enable auto-scaling
+gcloud alpha container clusters update seagull --enable-autoscaling --min-nodes=1 --max-nodes=16 --node-pool=preemptible-memory-32
 
 # Check on the progress
 PATH=$PATH:/path/to/workbench/scripts        # make the below easier to use
