@@ -1,23 +1,28 @@
 #!/bin/bash -eu
 
 AFL_TWEAKS=0
+SAVE_LOGS=0
 
 function usage
 {
 	cat <<END
-$0 [-a]
+$0 [-as]
 
 Options:
 	-a		Make sure nodes have AFL kernel tweaks applied.
+	-s		Save logs of completed pods.
 END
 	exit 1
 }
 
-while getopts "a" OPT
+while getopts "as" OPT
 do
 	case $OPT in
 		a)
 			AFL_TWEAKS=1
+			;;
+		s)
+			SAVE_LOGS=1
 			;;
 		*)
 			usage
@@ -51,6 +56,24 @@ do
 		$SCRIPT_DIR/afl_tweaks 2>&1 | grep -v "^1$"
 		set -e
 		echo "[*] AFL tweaks applied."
+	fi
+
+	if [ $SAVE_LOGS -eq 1 ]
+	then
+		mkdir -p $WORKDIR/logs
+		ls $WORKDIR/logs | sed -e "s/\.log$//" > /tmp/$$-logged-pods
+		# cat is here to avoid the failed grep
+		pod_names -ce | grep -v -f /tmp/$$-logged-pods | cat > /tmp/$$-new-pods 
+		NEW_COUNT=$(cat /tmp/$$-new-pods | wc -l)
+
+		if [ $NEW_COUNT -gt 0 ]
+		then
+			echo "[*] Saving logs for $NEW_COUNT newly-completed pods!"
+			cat /tmp/$$-new-pods | pods_savelog $WORKDIR/logs
+			echo "[*] Saved."
+		fi
+
+		rm -f /tmp/$$-new-pods /tmp/$$-logged-pods
 	fi
 
 	#echo "[*] Sleeping for 5 seconds..."
