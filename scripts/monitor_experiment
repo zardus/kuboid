@@ -71,6 +71,11 @@ do
 			echo "[*] Saving logs for $NEW_COUNT newly-completed pods!"
 			cat /tmp/$$-new-pods | pods_savelog $WORKDIR/logs
 			echo "[*] Saved."
+			for FUCKER in $(grep -l '^unexpected stream type ""' $WORKDIR/logs/*)
+			do
+				echo "[!] Log for $(basename $FUCKER) was incorrectly retrieved -- will retry."
+				rm -f $FUCKER
+			done
 		fi
 
 		rm -f /tmp/$$-new-pods /tmp/$$-logged-pods
