@@ -8,7 +8,7 @@ Usage: $0 EXPERIMENT [options]
 Options:
 	-k /path/to/KUBECONFIG			Copy in custom kube config file.
 	-n NFS_SERVER:NFS_PATH			Set up an NFS volume in kubernetes.
-	-g GCE_DISK_NAME[:GCE_DISK_SIZE]	Use a persistent google disk for results (default size 200GB).
+	-g GCE_DISK_NAME[:GCE_DISK_SIZE]	Use a persistent google disk for shared storage (default size 200GB).
 	-d DOCKER_IMG				Name of the docker image to use.
 	-s DOCKER_USER:DOCKER_PASS		Docker registry credentials.
 	-m MEMORY_REQUEST			Memory request for the pods.

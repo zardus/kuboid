@@ -64,8 +64,8 @@ spec:
       stdin: true
       tty: true
       volumeMounts:
-        - name: results
-          mountPath: "/results"
+        - name: shared
+          mountPath: "/shared"
       resources:
         limits:
           cpu: $CPU_LIMIT
@@ -77,7 +77,7 @@ spec:
   imagePullSecrets:
     - name: docker-secret
   volumes:
-  - name: results
+  - name: shared
 END
 
 if [ "$RESULT_DEST" == "nfs" -o "$RESULT_DEST" == "gce" ]
