@@ -1,0 +1,14 @@
+export WORKDIR=/home/yans/code/angr/workbench/experiments/driller
+export EXPERIMENT=driller
+export WORKBENCH_DIR=/home/yans/code/angr/workbench
+
+# default pod configuration
+export DOCKER_IMG=registry.hub.docker.com/shellphish/mechaphish
+export MEMORY_REQUEST=2Gi
+export MEMORY_LIMIT=8Gi
+export CPU_REQUEST=1000m
+export CPU_LIMIT=1000m
+
+export RESULT_DEST=gce
+export GCE_DISK_NAME=mydisk
+export GCE_DISK_SIZE=200GB
