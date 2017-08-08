@@ -3,8 +3,8 @@
 RESULT_INSTANCE=$(gcloud compute disks describe $GCE_DISK_NAME | grep -A1 users | tail -n1 | sed -e s=.*/==)
 
 gcloud compute ssh $RESULT_INSTANCE --command " \
-	sudo mkdir -p /mnt/disks/mydisk; \
-	sudo umount -l /mnt/disks/mydisk; \
+	sudo mkdir -p /mnt/disks/$GCE_DISK_NAME; \
+	sudo umount -l /mnt/disks/$GCE_DISK_NAME; \
 	sudo mount -o bind /var/lib/kubelet/plugins/kubernetes.io/gce-pd/mounts/$GCE_DISK_NAME /mnt/disks/$GCE_DISK_NAME"
 
 if [ $# -gt 0 ]
