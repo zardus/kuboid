@@ -2,7 +2,9 @@
 
 if [ $# -gt 0 ]
 then
-	echo $1
+	# thanks to https://stackoverflow.com/questions/12283463/in-bash-how-do-i-join-n-parameters-together-as-a-string
+	IFS="-"
+	echo "$*"
 else
 	cat
-fi | sed -e "s/\.//g" -e "s/\_//g" | tr '[:upper:]' '[:lower:]'
+fi | sed -e "s/\.//g" -e "s/\_//g" -e "s/ /-/g" | tr '[:upper:]' '[:lower:]'
