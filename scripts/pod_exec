@@ -2,4 +2,4 @@
 
 POD=$1
 shift
-kubectl exec $POD -n $EXPERIMENT -i -- bash -c "$1"
+kubectl exec $POD -i -- bash -c "$1"

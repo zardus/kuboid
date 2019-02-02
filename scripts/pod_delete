@@ -1,3 +1,3 @@
 #!/bin/bash -eu
 
-kubectl delete pod $1 -n $EXPERIMENT
+kubectl delete pod $1

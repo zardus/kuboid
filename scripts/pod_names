@@ -61,6 +61,6 @@ HOST_REGEX=${@:$OPTIND:1}
 [ -z "$HOST_REGEX" ] && HOST_REGEX=".*"
 
 (
-	kubectl get pods -n $EXPERIMENT -a $EXTRA_ARGS | tail -n+2
+	kubectl get pods $EXTRA_ARGS | tail -n+2
 	[ $UTILS -eq 1 ] && kubectl get pods -n workbench-util -a $EXTRA_ARGS | tail -n+2
-) | grep -E "$STATUS_REGEX" | awk $AWK_FILTER | grep -E "$HOST_REGEX"
+) | grep -E "$STATUS_REGEX" | awk $AWK_FILTER | grep -E "$HOST_REGEX" | grep -v "STATUS"
