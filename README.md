@@ -14,6 +14,11 @@ gcloud container clusters create seagull --enable-ip-alias  --enable-private-nod
 gcloud container node-pools delete default-pool
 gcloud container node-pools create as-pre-4cpu-4gb-16hdd --cluster seagull --machine-type n1-highmem-4 --disk-size=16GB --enable-autoscaling --min-nodes 1 --max-nodes 1024 --num-nodes 1 --preemptible
 gcloud container clusters resize seagull --size=1 --node-pool=as-pre-4cpu-4gb-16hdd
+
+# if you want to make a shareable kube config
+gcloud container clusters get-credentials seagull
+kubectl create clusterrolebinding default-admin --clusterrole cluster-admin --serviceaccount=default:default
+scripts/get_config
 ```
 
 ## Old docs
