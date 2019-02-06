@@ -5,6 +5,9 @@ GCE_CLUSTER_NAME=${GCE_CLUSTER_NAME-seagull}
 #echo "[*] Node Pools"
 #gcloud container node-pools list --cluster $GCE_CLUSTER_NAME
 
+echo "[#] Report for project: $(gcloud config get-value project)"
+echo "[#] $(date +%Y.%m.%d)"
+
 echo ""
 echo "[*] Instances"
 gcloud compute instances list | grep -E "STATUS|RUNNING"

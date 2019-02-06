@@ -47,6 +47,23 @@ do
 			AWK_FILTER='{print}'
 			EXTRA_ARGS='-owide'
 			;;
+		*)
+			echo "Usage $0 [-OPTIONS]"
+			echo "Options:"
+			echo "	-s	Filter pods for 'Successful'"
+			echo "	-p	Filter pods for 'Pending'"
+			echo "	-C	Filter pods for 'ContainerCreating'"
+			echo "	-c	Filter pods for 'Completed'"
+			echo "	-r	Filter pods for 'Running'"
+			echo "	-f	Filter pods for 'Failed'"
+			echo "	-e	Filter pods for 'Error'"
+			echo "	-E	Filter pods for 'ErrImagePull'"
+			echo "	-u	Filter pods for 'Unknown'"
+			echo "	-o	Filter pods for 'OOMKilled'"
+			echo "	-U	Display internal kubernetes pods"
+			echo "	-w	Enable wide-mode display"
+			exit 0
+			;;
 	esac
 done
 
