@@ -48,6 +48,7 @@ There are some useful scripts to help you create and manage pods for your experi
 - `kubesanitize` - sanitizes any string into a form acceptable for a kubernetes entity name (such as a pod)
 - `monitor_experiment` - monitors an experiment, saving logs as pods complete. BROKEN.
 - `set_docer_secret` - sets the dockerhub credentials with which to pull images
+- `mount_nfs` - mounts the cluster's NFS share on the host filesystem
 
 ## Cluster Administration
 
