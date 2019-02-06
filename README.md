@@ -10,25 +10,24 @@ Distributed scientific experiments (at least, the ones this framework targes) sh
 kuboid is made to make such experiments easier by enabling mass creation, management, and deletion of kubernetes pods.
 It assumes that you are the master of your own kubernetes workspace, and works to try to minimize your pain in wrangling your experiments.
 
-## The scripts
+If all goes well, there should be an NFS-shared directory mounted in `/shared` in every pod!
+
+## Setup
 
 The scripts are designed to reside in your path:
 
 ```
-export PATH=/path/to/workbench/scripts:$PATH
+export PATH=/path/to/kuboid/scripts:$PATH
 ```
 
 Alternatively, you can run `setup.sh`, which will put that in your bashrc.
 
-There are some useful scripts:
+## Pod creation and management
 
-**Pod Creation**
+There are some useful scripts to help you create and manage pods for your experiment!
 
 - `pod_create` - a super simple interface for the creation of a Kubernetes pod! USE THIS!! Also read the help: it has some cool features, like the ability to skip pod creation if you already have completion logs from that pod.
 - `pods_create` - a helper to create multiple pods. Takes commands as lines on stdin and pushes them to `pod_create`
-
-**Pod Management**
-
 - `pod_names` - retrieves the names of pods that fit certain status criteria or regexes. See the help for more info. This is mainly meant to be piped into various other pod management commands.
 - `pod_states` - gets a summary of the states of various pods
 - `pod_runtime` - retrieves the runtime of a pod
@@ -46,8 +45,13 @@ There are some useful scripts:
 - `pods_loggrep` - takes a list of pods from stdin and greps them for a regex, printing out the pod names that match
 - `pod_delete` - deletes a pod. Make sure to save the pod's logs, as this deletes them.
 - `pods_delete` - takes a list of pods via stdin (for example, from `pod_names`), and deletes them
+- `kubesanitize` - sanitizes any string into a form acceptable for a kubernetes entity name (such as a pod)
+- `monitor_experiment` - monitors an experiment, saving logs as pods complete. BROKEN.
+- `set_docer_secret` - sets the dockerhub credentials with which to pull images
 
-**Node Management**
+## Cluster Administration
+
+There are also scripts to make the cluster admin's life simpler.
 
 - `node_names` - gets the names of the kubernetes nodes in the cluster
 - `node_describe` - describes a node
@@ -56,23 +60,14 @@ There are some useful scripts:
 - `nodes_exec` - executes a command on many nodes. Requires GCE ssh access.
 - `nodes_idle`
 - `nodes_used`
-
-**GCE Scripts**
-
 - `gce_list`
 - `gce_resize`
 - `gce_shared_mount`
 - `gce_shared_ssh`
 - `configure_nfs_server` - creates a shared GCE disk and configures the kubernetes NFS server and replication controller
 - `configure_nfs_volume` - creates the NFS volume and volume claim in the pod namespace
-
-**Helper Scripts**
-
 - `namespace_config` - creates a kubernetes config file, authenticated by token, and customized for a given namespace
-- `kubesanitize` - sanitizes any string into a form acceptable for a kubernetes entity name (such as a pod)
 - `afl_tweaks` - applies necessary tweaks to nodes to run AFL. Requires direct GCE ssh access.
-- `set_docer_secret` - sets the dockerhub credentials with which to pull images
-- `monitor_experiment` - monitors an experiment, saving logs as pods complete. BROKEN.
 
 ## Examples
 
@@ -108,8 +103,11 @@ gcloud container node-pools delete default-pool
 gcloud container node-pools create as-pre-4cpu-4gb-16hdd --cluster seagull --machine-type n1-highmem-4 --disk-size=16GB --enable-autoscaling --min-nodes 1 --max-nodes 1024 --num-nodes 1 --preemptible
 gcloud container clusters resize seagull --size=1 --node-pool=as-pre-4cpu-4gb-16hdd
 
+# create the NFS configuration
+create_nfs_server
+
 # if you want to make a shareable kube config
 gcloud container clusters get-credentials seagull
 kubectl create clusterrolebinding default-admin --clusterrole cluster-admin --serviceaccount=default:default
-get_config -n some_namespace
+namespace_config -n some_namespace
 ```
