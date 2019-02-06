@@ -89,6 +89,19 @@ pod_names -c | pods_delete
 
 # delete all pods
 pod_names | pods_delete
+
+
+# make a list of pod commands
+echo sleep 10 >> mypods
+echo sleep 20 >> mypods
+echo sleep 30 >> mypods
+mkdir completed_logs
+# keep scheduling the uncompleted ones (if they're pre-empted)
+watch 'cat mypods | pods_create -p arbiter -l completed_logs'
+# keep getting the completed logs and removing them
+watch 'pod_names -c | pods_savelog | pods_delete'
+# keep a log of errored and OOM pods
+watch 'pod_names -eof >> errored_pods'
 ```
 
 ## Cluster Creation
