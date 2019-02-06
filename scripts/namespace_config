@@ -2,6 +2,8 @@
 # dumps a config from a secret
 # based almost fully on: https://gist.github.com/so0k/8fad3b1639b3d70cd841703fda67f16b
 
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
 while getopts "s:n:o:" OPT
 do
         case $OPT in
@@ -29,25 +31,25 @@ namespace="${namespace-default}"
 output="${output-kubeconfig-$namespace}"
 secret="${secret-$(kubectl get secrets | grep default | awk '{print $1}')}"
 
-echo "secret = ${secret}"
-echo "namespace = ${namespace}"
-echo "output file = ${output}"
+echo "[*] secret = ${secret}"
+echo "[*] namespace = ${namespace}"
+echo "[*] output file = ${output}"
 
 
 kubectl get secret ${secret} -o json | jq -r '.data["ca.crt"]' | base64 -d > /tmp/ca.crt
 user_token=$(kubectl get secret ${secret} -o json | jq -r '.data["token"]' | base64 -d)
-echo "token = ${user_token}"
+echo "[*] token = ${user_token}"
 
 context=`kubectl config current-context`
-echo "context = $context"
+echo "[*] context = $context"
 
 cluster_name=`kubectl config get-contexts $context | awk '{print $3}' | tail -n 1`
-echo "cluster_name= ${cluster_name}"
+echo "[*] cluster_name= ${cluster_name}"
 
 endpoint=`kubectl config view -o jsonpath="{.clusters[?(@.name == \"${cluster_name}\")].cluster.server}"`
-echo "endpoint = ${endpoint}"
+echo "[*] endpoint = ${endpoint}"
 
-echo "preparing $output"
+echo "[*] preparing $output"
 KUBECONFIG=$output kubectl config set-context $context --namespace=$namespace
 KUBECONFIG=$output kubectl config set-cluster ${cluster_name} --embed-certs=true --server=${endpoint} --certificate-authority=/tmp/ca.crt
 KUBECONFIG=$output kubectl config set-credentials ${cluster_name#cluster-} --token=${user_token}
@@ -64,8 +66,10 @@ metadata:
   labels:
     name: $namespace
 END
-
 fi
 
-echo "done! Test with: "
-echo "KUBECONFIG=$output kubectl get no"
+echo "[*] configuring NFS volumes"
+$SCRIPT_DIR/configure_nfs_volume -n $namespace
+
+echo "[*] done! Test with: "
+echo "> KUBECONFIG=$output kubectl get no"

@@ -63,6 +63,8 @@ There are some useful scripts:
 - `gce_resize`
 - `gce_shared_mount`
 - `gce_shared_ssh`
+- `configure_nfs_server` - creates a shared GCE disk and configures the kubernetes NFS server and replication controller
+- `configure_nfs_volume` - creates the NFS volume and volume claim in the pod namespace
 
 **Helper Scripts**
 

@@ -1,0 +1,85 @@
+#!/bin/bash -eu
+
+WORKDIR=/tmp/workbench
+mkdir -p $WORKDIR/setup
+
+while getopts "s:p:n:N:" OPT
+do
+	case $OPT in
+		p)
+			NFS_PATH=$OPTARG
+			;;
+		s)
+			NFS_SERVER=$OPTARG
+			;;
+		n)
+			VOLUME_NAMESPACE=$OPTARG
+			;;
+		N)
+			SERVER_NAMESPACE=$OPTARG
+			;;
+		*)
+			echo "Usage $0 [-OPTIONS]"
+			echo "Options:"
+			echo "	-n	VOLUME_NAMESPACE	The kube namespace of the NFS volume & claim (default: default)."
+			echo "	-N	SERVER_NAMESPACE	The kube namespace of the NFS server (default: default)."
+			echo "	-s	NFS_SERVER		The hostname of the NFS server (default: autodetected)."
+			echo "	-p	NFS_SERVER		The path on the NFS server (default: /exports/results)."
+			exit 0
+			;;
+	esac
+done
+
+VOLUME_NAMESPACE=${VOLUME_NAMESPACE-default}
+SERVER_NAMESPACE=${SERVER_NAMESPACE-default}
+NFS_PATH=${NFS_PATH-/exports/results}
+NFS_SERVER=${NFS_SERVER-$(kubectl -n $SERVER_NAMESPACE get services | grep nfs-service | awk '{print $3}')}
+
+if [ -z "$NFS_SERVER" ]
+then
+	echo "[*] Invalid NFS server detected."
+	exit 1
+fi
+
+echo "[*] Creating NFS share."
+
+NAMESPACE=$VOLUME_NAMESPACE
+
+cat <<END > $WORKDIR/setup/nfs_pv_$NAMESPACE.yml
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: nfs
+  namespace: $NAMESPACE
+spec:
+  capacity:
+    storage: 1Mi
+  storageClassName: standard
+  accessModes:
+    - ReadWriteMany
+  nfs:
+    server: $NFS_SERVER
+    path: "$NFS_PATH"
+END
+
+cat <<END > $WORKDIR/setup/nfs_pvc_$NAMESPACE.yml
+kind: PersistentVolumeClaim
+apiVersion: v1
+metadata:
+  name: nfs
+  namespace: $NAMESPACE
+spec:
+  accessModes:
+    - ReadWriteMany
+  resources:
+    requests:
+      storage: 1Mi
+  volumeName: nfs
+END
+
+kubectl delete -n $NAMESPACE -f $WORKDIR/setup/nfs_pv_$NAMESPACE.yml || echo "[+] No PV to delete..."
+kubectl delete -n $NAMESPACE -f $WORKDIR/setup/nfs_pvc_$NAMESPACE.yml || echo "[+] No PVC to delete..."
+echo "[+] Creating PV..."
+kubectl create -n $NAMESPACE -f $WORKDIR/setup/nfs_pv_$NAMESPACE.yml
+echo "[+] Creating PVC..."
+kubectl create -n $NAMESPACE -f $WORKDIR/setup/nfs_pvc_$NAMESPACE.yml

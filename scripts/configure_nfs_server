@@ -1,0 +1,133 @@
+#!/bin/bash -eu
+
+WORKDIR=/tmp/workbench
+mkdir -p $WORKDIR/setup
+
+while getopts "c:d:s:n:" OPT
+do
+	case $OPT in
+		c)
+			CLUSTER_NAME=$OPTARG
+			;;
+		d)
+			DISK_NAME=$OPTARG
+			;;
+		s)
+			DISK_SIZE=$OPTARG
+			;;
+		n)
+			NAMESPACE=$OPTARG
+			;;
+		*)
+			echo "Usage $0 [-OPTIONS]"
+			echo "Options:"
+			echo "	-c	CLUSTER_NAME		The name of the kubernetes cluster."
+			echo "	-d	DISK_NAME		The name of the GCE disk (default: \$CLUSTER_NAME-nfs-disk)."
+			echo "	-s	DISK_SIZE		The size of the GCE disk (default: 4TB)."
+			echo "	-n	NAMESPACE		The kube namespace of the NFS server pod (default: default)."
+			exit 0
+			;;
+	esac
+done
+
+CLUSTER_NAME=${CLUSTER_NAME-$(kubectl config get-clusters | tail -n1 | sed -e "s/.*_//")}
+DISK_NAME=${DISK_NAME-$CLUSTER_NAME-nfs-disk}
+DISK_SIZE=${DISK_SIZE-4096GB}
+NAMESPACE=${NAMESPACE-default}
+
+
+
+
+if gcloud compute disks list 2>&1| grep -q $DISK_NAME
+then
+	echo "[*] GCE disk already exists..."
+else
+	FMTBOX=$CLUSTER_NAME-formatter
+
+	echo "[*] GCE disk creation commencing!"
+
+	gcloud compute disks create --size $DISK_SIZE $DISK_NAME
+	gcloud compute instances create $FMTBOX
+	gcloud compute instances attach-disk --disk=$DISK_NAME --device-name results $FMTBOX
+	gcloud compute ssh $FMTBOX --command " \
+		sudo mkfs.ext4 -m 0 -F -E lazy_itable_init=0,lazy_journal_init=0,discard /dev/disk/by-id/google-results && \
+		sudo mount /dev/disk/by-id/google-results /mnt && \
+		sudo chmod 777 /mnt && \
+		sudo mkdir /mnt/results && \
+		sudo chown 1000.1000 /mnt/results && \
+		sudo umount /mnt"
+	gcloud compute instances detach-disk --disk $DISK_NAME $FMTBOX
+	yes | gcloud compute instances delete $FMTBOX
+
+	echo "[*] GCE disk creation complete!"
+fi
+
+
+if kubectl -n $NAMESPACE describe pod nfs-server >/dev/null 2>/dev/null
+then
+	echo "[*] NFS service already exists. To delete:"
+	echo "> kubectl -n $NAMESPACE delete rc nfs-server"
+	echo "> kubectl -n $NAMESPACE service rc nfs-server"
+else
+	echo "[*] Creating NFS server."
+
+	cat <<END > $WORKDIR/setup/gce_nfs_rc.yml
+apiVersion: v1
+kind: ReplicationController
+metadata:
+  name: nfs-server
+  namespace: $NAMESPACE
+spec:
+  replicas: 1
+  selector:
+    role: nfs-server
+  template:
+    metadata:
+      labels:
+        role: nfs-server
+    spec:
+      containers:
+      - name: nfs-server
+        image: gcr.io/google-samples/nfs-server:1.1
+        ports:
+          - name: nfs
+            containerPort: 2049
+          - name: mountd
+            containerPort: 20048
+          - name: rpcbind
+            containerPort: 111
+        securityContext:
+          privileged: true
+        volumeMounts:
+          - mountPath: /exports
+            name: mypvc
+      volumes:
+        - name: mypvc
+          gcePersistentDisk:
+            pdName: $DISK_NAME
+            fsType: ext4
+END
+
+	cat <<END > $WORKDIR/setup/gce_nfs_service.yml
+kind: Service
+apiVersion: v1
+metadata:
+  name: nfs-service
+  namespace: $NAMESPACE
+spec:
+  ports:
+    - name: nfs
+      port: 2049
+    - name: mountd
+      port: 20048
+    - name: rpcbind
+      port: 111
+  selector:
+    role: nfs-server
+END
+
+	#kubectl delete -f $WORKDIR/setup/gce_nfs_rc.yml || echo "[+] No NFS RC to delete..."
+	#kubectl delete -f $WORKDIR/setup/gce_nfs_service.yml || echo "[+] No NFS service to delete..."
+	kubectl create -f $WORKDIR/setup/gce_nfs_rc.yml || echo "[+] NFS RC already existed..."
+	kubectl create -f $WORKDIR/setup/gce_nfs_service.yml || echo "[+] NFS service already existed..."
+fi
