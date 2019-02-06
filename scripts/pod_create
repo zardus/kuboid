@@ -3,13 +3,23 @@
 function usage
 {
 	cat <<END
-$0 [-c CPU_REQUEST] [-C CPU_LIMIT] [-m MEMORY_REQUEST] [-M MEMORY_LIMIT] [ -l ] POD_NAME "COMMAND"
+$0 [-c CPU_REQUEST] [-C CPU_LIMIT] [-m MEMORY_REQUEST] [-M MEMORY_LIMIT] [-v VOLUME] [-i IMAGE] [ -l LOGDIR ] [ -n POD_NAME ] [ -w WORKDIR ] [ -p POD_PREFIX ] COMMAND
 END
 }
 
-CHECK_LOG=${CHECK_LOG:-0}
+LOGDIR=${LOGDIR-}
+NFS=${NFS-}
+IMAGE=${IMAGE-ubuntu}
+CPU_REQUEST=${CPU_REQUEST:-900m}
+CPU_LIMIT=${CPU_LIMIT:-1000m}
+MEMORY_REQUEST=${MEMORY_REQUEST:-2Gi}
+MEMORY_LIMIT=${MEMORY_LIMIT:-4Gi}
+POD_NAME=${POD_NAME-}
+POD_PREFIX=${POD_PREFIX-}
+WORKDIR=${WORKDIR-}
+VOLUME=${VOLUME-}
 
-while getopts "c:C:m:M:l" OPT
+while getopts "c:C:m:M:l:n:i:w:p:" OPT
 do
 	case $OPT in
 		c)
@@ -24,20 +34,43 @@ do
 		M)
 			MEMORY_LIMIT=$OPTARG
 			;;
+		i)
+			IMAGE=$OPTARG
+			;;
 		l)
-			CHECK_LOG=1
+			LOGDIR=$OPTARG
+			;;
+		v)
+			VOLUME=$OPTARG
+			;;
+		n)
+			POD_NAME=$OPTARG
+			;;
+		p)
+			POD_PREFIX=$OPTARG
+			;;
+		w)
+			WORKDIR=$OPTARG
 			;;
 		*)
 			usage
 			;;
 	esac
-
 done
 
-POD_NAME=$(echo ${@:$OPTIND:1} | $WORKBENCH_DIR/scripts/kubesanitize)
-POD_CMD=${@:$(($OPTIND+1)):1}
+WORKDIR=${WORKDIR:-/tmp/workbench}
+mkdir -p $WORKDIR
 
-if [ $CHECK_LOG -eq 1 -a -f $WORKDIR/logs/$POD_NAME.log ]
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+shift $(($OPTIND-1))
+POD_CMD="$@"
+
+POD_NAME=${POD_NAME:-$POD_CMD}
+POD_NAME=${POD_NAME:-$POD_CMD}
+[ -n "$POD_PREFIX" ] && POD_NAME=$POD_PREFIX-$POD_NAME
+POD_NAME=$(echo $POD_NAME | $SCRIPT_DIR/kubesanitize)
+
+if [ -n "$LOGDIR" -a -f $LOGDIR/$POD_NAME ]
 then
 	echo "[*] Skipping $POD_NAME creation because the completion log is already there."
 	exit
@@ -51,7 +84,6 @@ apiVersion: v1
 kind: Pod
 metadata:
   name: $POD_NAME
-  namespace: $EXPERIMENT
 spec:
   containers:
     - name: $POD_NAME
@@ -59,7 +91,7 @@ spec:
         - "/bin/bash"
         - "-c"
         - "$POD_CMD"
-      image: $DOCKER_IMG
+      image: $IMAGE
       imagePullPolicy: Always
       stdin: true
       tty: true
@@ -80,22 +112,16 @@ spec:
   - name: shared
 END
 
-if [ "$RESULT_DEST" == "nfs" -o "$RESULT_DEST" == "gce" ]
+if [ -n "$VOLUME" ]
 then
 	cat <<END >>$PODPATH
     persistentVolumeClaim:
-      claimName: $EXPERIMENT-nfs
+      claimName: $VOLUME
 END
 else
 	cat <<END >>$PODPATH
     emptyDir: {}
 END
 fi
-
-#[ "$RESULT_DEST" == "gce" ] && cat <<END >>$PODPATH
-#    gcePersistentDisk:
-#      pdName: $GCE_DISK_NAME
-#      fsType: ext4
-#END
 
 kubectl create -f $PODPATH

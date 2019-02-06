@@ -1,36 +1,71 @@
-#!/bin/bash -e
+#!/bin/bash -eu
 # dumps a config from a secret
 # based almost fully on: https://gist.github.com/so0k/8fad3b1639b3d70cd841703fda67f16b
 
-OUTPUT=token-conf
+while getopts "s:n:o:" OPT
+do
+        case $OPT in
+                s)
+                	secret=$OPTARG
+                	;;
+                n)
+                	namespace=$OPTARG
+                	;;
+                o)
+                	output=$OPTARG
+                	;;
+                *)
+                	echo "Usage: $0 [ -s SECRET ] [ -n NAMESPACE ] [ -o FILENAME ]"
+                	echo "Detailed options:"
+                	echo "	-s	The kubernetes secret to use as the authentication token (from kubectl get secrets)"
+                	echo "	-n	The namespace to configure the config file with."
+                	echo "	-o	The output filename."
+                	exit 0
+                	;;
+        esac
+done
 
-if [ -z "$1" ]
-then
-	secret=$(kubectl get secrets | grep default | awk '{print $1}')
-else
-	secret=$1
-fi
+namespace="${namespace-default}"
+output="${output-kubeconfig-$namespace}"
+secret="${secret-$(kubectl get secrets | grep default | awk '{print $1}')}"
+
 echo "secret = ${secret}"
+echo "namespace = ${namespace}"
+echo "output file = ${output}"
 
 
 kubectl get secret ${secret} -o json | jq -r '.data["ca.crt"]' | base64 -d > /tmp/ca.crt
 user_token=$(kubectl get secret ${secret} -o json | jq -r '.data["token"]' | base64 -d)
 echo "token = ${user_token}"
 
-c=`kubectl config current-context`
-echo "context = $c"
+context=`kubectl config current-context`
+echo "context = $context"
 
-cluster_name=`kubectl config get-contexts $c | awk '{print $3}' | tail -n 1`
+cluster_name=`kubectl config get-contexts $context | awk '{print $3}' | tail -n 1`
 echo "cluster_name= ${cluster_name}"
 
 endpoint=`kubectl config view -o jsonpath="{.clusters[?(@.name == \"${cluster_name}\")].cluster.server}"`
 echo "endpoint = ${endpoint}"
 
-echo "preparing k8s-${user}-conf"
-KUBECONFIG=$OUTPUT kubectl config set-cluster ${cluster_name} --embed-certs=true --server=${endpoint} --certificate-authority=/tmp/ca.crt
-KUBECONFIG=$OUTPUT kubectl config set-credentials ${cluster_name#cluster-} --token=${user_token}
-KUBECONFIG=$OUTPUT kubectl config set-context ${cluster_name#cluster-} --cluster=${cluster_name} --user=${cluster_name#cluster-}
-KUBECONFIG=$OUTPUT kubectl config use-context ${cluster_name#cluster-}
+echo "preparing $output"
+KUBECONFIG=$output kubectl config set-context $context --namespace=$namespace
+KUBECONFIG=$output kubectl config set-cluster ${cluster_name} --embed-certs=true --server=${endpoint} --certificate-authority=/tmp/ca.crt
+KUBECONFIG=$output kubectl config set-credentials ${cluster_name#cluster-} --token=${user_token}
+KUBECONFIG=$output kubectl config set-context ${cluster_name#cluster-} --cluster=${cluster_name} --user=${cluster_name#cluster-}
+KUBECONFIG=$output kubectl config use-context ${cluster_name#cluster-}
+
+if [ "$namespace" != "default" ]
+then
+	cat <<END | kubectl create -f - || echo "Namespace already exists."
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: $namespace
+  labels:
+    name: $namespace
+END
+
+fi
 
 echo "done! Test with: "
-echo "KUBECONFIG=$OUTPUT kubectl get no"
+echo "KUBECONFIG=$output kubectl get no"

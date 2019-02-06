@@ -7,4 +7,4 @@ then
 	echo "$*"
 else
 	cat
-fi | sed -e "s/\.//g" -e "s/\_//g" -e "s/ /-/g" | tr '[:upper:]' '[:lower:]'
+fi | tr " " "-" | tr -d -C '[:alnum:]-' | tr '[:upper:]' '[:lower:]'
