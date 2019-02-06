@@ -11,10 +11,7 @@ Options:
 				cap the resources consumed by the pod at one core)
 	-m MEMORY_REQUEST	The kubernetes memory request. Default: 2Gi (2048 megabytes)
 	-M MEMORY_LIMIT		The kubernetes memory limit. Default: 4Gi (4096 megabytes)
-	-v VOLUME		The PersistentVolumeClaim to mount as the "shared" volume, for
-				copying out results (though it's easier to exfiltrate via stdout).
-				Default: the "nfs" volume, if it exists in the namespace.
-	-V			Use a blank volume instead of NFS.
+	-N 			Don't mount an NFS share in /shared.
 	-i IMAGE		The Docker image to pull.
 	-l LOGDIR		A directory to check for completion logs of pods. If a log is found
 				for a pod, the pod will not be created. Eases re-running missing
@@ -41,10 +38,9 @@ MEMORY_LIMIT=${MEMORY_LIMIT:-4Gi}
 POD_NAME=${POD_NAME-}
 POD_PREFIX=${POD_PREFIX-}
 WORKDIR=${WORKDIR-}
-VOLUME=${VOLUME-}
-NOVOLUME=${NOVOLUME-}
+NONFS=${NONFS:-0}
 
-while getopts "c:C:m:M:l:n:i:w:p:v:V" OPT
+while getopts "c:C:m:M:l:n:i:w:p:N" OPT
 do
 	case $OPT in
 		c)
@@ -65,11 +61,8 @@ do
 		l)
 			LOGDIR=$OPTARG
 			;;
-		v)
-			VOLUME=$OPTARG
-			;;
-		V)
-			NOVOLUME=1
+		N)
+			NONFS=1
 			;;
 		n)
 			POD_NAME=$OPTARG
@@ -108,8 +101,6 @@ fi
 mkdir -p $WORKDIR/pods
 PODPATH=$WORKDIR/pods/$POD_NAME.yml
 
-[ -z "$VOLUME" ] && kubectl describe pvc nfs 2>/dev/null >/dev/null && VOLUME=nfs
-
 cat <<END >$PODPATH
 apiVersion: v1
 kind: Pod
@@ -143,11 +134,11 @@ spec:
   - name: shared
 END
 
-if [ "$NOVOLUME" -ne 1 -a -n "$VOLUME" ]
+if [ "$NONFS" -ne 1 ]
 then
 	cat <<END >>$PODPATH
     persistentVolumeClaim:
-      claimName: $VOLUME
+      claimName: nfs
 END
 else
 	cat <<END >>$PODPATH
