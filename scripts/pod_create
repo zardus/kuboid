@@ -3,7 +3,29 @@
 function usage
 {
 	cat <<END
-$0 [-c CPU_REQUEST] [-C CPU_LIMIT] [-m MEMORY_REQUEST] [-M MEMORY_LIMIT] [-v VOLUME] [-i IMAGE] [ -l LOGDIR ] [ -n POD_NAME ] [ -w WORKDIR ] [ -p POD_PREFIX ] COMMAND
+Usage: $0 [-c CPU_REQUEST] [-C CPU_LIMIT] [-m MEMORY_REQUEST] [-M MEMORY_LIMIT] [-v VOLUME] [-i IMAGE] [ -l LOGDIR ] [ -n POD_NAME ] [ -w WORKDIR ] [ -p POD_PREFIX ] COMMAND
+Options:
+	-c CPU_REQUEST		The kubernetes CPU request. Default: 900m (90% of one core, to
+				allow some room for omnipresent tiny kube services)
+	-C CPU_LIMIT		The kubernetes CPU limit. Default: 1000m (100% of one core, to
+				cap the resources consumed by the pod at one core)
+	-m MEMORY_REQUEST	The kubernetes memory request. Default: 2Gi (2048 megabytes)
+	-M MEMORY_LIMIT		The kubernetes memory limit. Default: 4Gi (4096 megabytes)
+	-v VOLUME		The PersistentVolumeClaim to mount as the "shared" volume, for
+				copying out results (though it's easier to exfiltrate via stdout).
+	-i IMAGE		The Docker image to pull.
+	-l LOGDIR		A directory to check for completion logs of pods. If a log is found
+				for a pod, the pod will not be created. Eases re-running missing
+				parts of large experiments.
+	-n POD_NAME		The name of the pod. If not provided, this will be automatically
+				generated from the given command.
+	-w WORKDIR		A temporary directory to create the yml files describing the pods.
+				If not specified, /tmp/workbench will be used.
+	-p POD_PREFIX		A string to prefix the pod names. Makes mass-scheduling different
+				parts of an experiment easier.
+	COMMAND			The command to run in the dockerfile.
+
+All options can also be specified via environment variables (i.e.: POD_PREFIX=mypods ./pod_create echo hello).
 END
 }
 
@@ -54,6 +76,7 @@ do
 			;;
 		*)
 			usage
+			exit 0
 			;;
 	esac
 done
