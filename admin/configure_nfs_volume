@@ -49,8 +49,7 @@ cat <<END > $WORKDIR/setup/nfs_pv_$NAMESPACE.yml
 apiVersion: v1
 kind: PersistentVolume
 metadata:
-  name: nfs
-  namespace: $NAMESPACE
+  name: nfs-$NAMESPACE
 spec:
   capacity:
     storage: 1Mi
@@ -74,11 +73,11 @@ spec:
   resources:
     requests:
       storage: 1Mi
-  volumeName: nfs
+  volumeName: nfs-$NAMESPACE
 END
 
-kubectl delete -n $NAMESPACE -f $WORKDIR/setup/nfs_pv_$NAMESPACE.yml || echo "[+] No PV to delete..."
 kubectl delete -n $NAMESPACE -f $WORKDIR/setup/nfs_pvc_$NAMESPACE.yml || echo "[+] No PVC to delete..."
+kubectl delete -n $NAMESPACE -f $WORKDIR/setup/nfs_pv_$NAMESPACE.yml || echo "[+] No PV to delete..."
 echo "[+] Creating PV..."
 kubectl create -n $NAMESPACE -f $WORKDIR/setup/nfs_pv_$NAMESPACE.yml
 echo "[+] Creating PVC..."
