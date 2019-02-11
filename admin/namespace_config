@@ -4,7 +4,7 @@
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
-while getopts "s:n:o:" OPT
+while getopts "s:n:o:N" OPT
 do
         case $OPT in
                 s)
@@ -12,6 +12,9 @@ do
                 	;;
                 n)
                 	namespace=$OPTARG
+                	;;
+                N)
+                	nonfs=1
                 	;;
                 o)
                 	output=$OPTARG
@@ -27,6 +30,7 @@ do
         esac
 done
 
+nonfs="${nonfs-0}"
 namespace="${namespace-default}"
 output="${output-kubeconfig-$namespace}"
 secret="${secret-$(kubectl get secrets | grep default | awk '{print $1}')}"
@@ -68,8 +72,11 @@ metadata:
 END
 fi
 
-echo "[*] configuring NFS volumes"
-$SCRIPT_DIR/configure_nfs_volume -n $namespace
+if [ "$nonfs" -ne 1 ]
+then
+	echo "[*] configuring NFS volumes"
+	$SCRIPT_DIR/configure_nfs_volume -n $namespace
+fi
 
 echo "[*] done! Test with: "
 echo "> KUBECONFIG=$output kubectl get no"
