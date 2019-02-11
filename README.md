@@ -109,13 +109,15 @@ watch 'pod_names -eof >> errored_pods'
 Here's an example to create a cluster:
 
 ```
-# create the cluster
+# create the cluster (private IPs --- NO INTERNET ACCESS)
 gcloud container clusters create seagull --enable-ip-alias  --enable-private-nodes --no-enable-master-authorized-networks --create-subnetwork name=seagull-network --master-ipv4-cidr 172.16.0.0/28 --preemptible --enable-autoscaling --max-nodes=512 --min-nodes=0 --machine-type=n1-highmem-8
+# create the cluster (public IPs)
+gcloud container clusters create seagull --preemptible --enable-autoscaling --max-nodes=512 --min-nodes=0 --machine-type=n1-highmem-8
 
 # if you change your mind about the pool later, recreate it
 gcloud container node-pools delete default-pool
-gcloud container node-pools create as-pre-4cpu-4gb-16hdd --cluster seagull --machine-type n1-highmem-4 --disk-size=16GB --enable-autoscaling --min-nodes 1 --max-nodes 1024 --num-nodes 1 --preemptible
-gcloud container clusters resize seagull --size=1 --node-pool=as-pre-4cpu-4gb-16hdd
+gcloud container node-pools create as-pre-8cpu-52gb-100hdd --cluster seagull --machine-type n1-highmem-8 --disk-size=100GB --enable-autoscaling --min-nodes 1 --max-nodes 500 --num-nodes 1 --preemptible
+gcloud container clusters resize seagull --size=1 --node-pool=as-pre-8cpu-52gb-100hdd
 
 # create the NFS configuration
 create_nfs_server
