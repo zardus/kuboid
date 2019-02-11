@@ -4,5 +4,5 @@ NODE=$1
 shift
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-IP=$($SCRIPT_DIR/node_describe $NODE | grep InternalIP | awk '{print $2}')
+IP=$($SCRIPT_DIR/node_describe $NODE | grep ExternalIP | awk '{print $2}')
 ssh $IP "$@"
