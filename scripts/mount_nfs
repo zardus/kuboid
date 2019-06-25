@@ -3,8 +3,8 @@
 MOUNT_POINT=${1-/mnt/kube-nfs}
 
 echo "[*] Shutting down local NFS servers (to free ports)"
-sudo service nfs-kernel-server stop
-sudo service rpcbind stop
+sudo service nfs-kernel-server stop || true
+sudo service rpcbind stop || true
 
 echo "[*] Forwarding NFS ports to kubernetes"
 sudo kubectl port-forward service/nfs-service 2049 20048 111 &
