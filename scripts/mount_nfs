@@ -7,7 +7,7 @@ sudo service nfs-kernel-server stop || true
 sudo service rpcbind stop || true
 
 echo "[*] Forwarding NFS ports to kubernetes"
-sudo kubectl port-forward service/nfs-service 2049 20048 111 &
+sudo --preserve-env=KUBECONFIG kubectl --namespace=default port-forward service/nfs-service 2049 20048 111 &
 sleep 5
 
 echo "[*] Mounting NFS share at $MOUNT_POINT"
