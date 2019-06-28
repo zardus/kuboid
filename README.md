@@ -12,6 +12,82 @@ It assumes that you are the master of your own kubernetes workspace, and works t
 
 If all goes well, there should be an NFS-shared directory mounted in `/shared` in every pod!
 
+## QUICKSTART
+
+If you want to get started quick:
+
+### Step 1: dockerize your experiment!
+
+This is easy!
+Simply create a dockerfile that has all the code your experiment needs.
+You can also dump the data in there, but that'll likely make your docker image big and unyieldy.
+My advice is to keep the data somewhere else.
+For example, I pushed the CGC binaries I used to experiment on to a github repo (https://github.com/zardus/cgc-bins) and used to pull them down in my experiment script.
+
+When your dockerfile is done, you'll push it to dockerhub:
+
+```
+docker build -t my_dockerhub_username/my_experiment /path/to/my/code
+docker login my_dockerhub_username
+docker push my_dockerhub_username/my_experiment
+```
+
+Now you're ready to rock!
+
+### Step 2: get a list of tasks together!!
+
+To run your tasks, kuboid will cause kubernetes to execute them with your task provided on the commandline (so make sure your `CMD` in your dockerfile can deal with that).
+Kuboid will take each line in a task file (or stdin) as a task.
+For example:
+
+```
+# cat /my/echo/experiments
+echo 1
+echo 2
+echo 3
+echo 4
+```
+
+Now you're ready to roll!
+
+### Step 3: run the experiment!!!
+
+Kuboid provides a master script that'll run and monitor your experiment:
+
+```
+/path/to/kuboid/scripts/monitor_experiment -f /my/file/of/tasks -l kuboid-logs -i my_dockerhub_username/my_experiment
+```
+
+`monitor_experiment` will schedule your tasks into kubernetes pods, monitor them for completion, save the logs of your completed pods, and reschedule ones that get deleted because of system failures (or node preemption on cloud services).
+In this example, the tasks will be read from /my/file/of/tasks, but you can also emit the `-f` option to make kuboid read them from stdin.
+More tasks can be added to this file (or to stdin) at runtime!
+
+As tasks complete (and only when they complete), their log output will be saved into `kuboid-logs` (or whatever directory you provide via `-l`).
+This is important: not only can you get the results of your experiments from these logs, but kuboid will consult this directory to figure out whether a pod disappeared because it completed, or whether it disappeared due to a node failure.
+If a log for a pod exists in this directory, the associated task will *not* be (re)run.
+
+Kuboid also provides a lot of scripts for checking on and managing your nodes, other than `monitor_experiment`.
+Check them out below.
+
+Now you're ready for SCIENCE!
+
+### Step 4: getting the results!!!!
+
+There are two ways to get the results of your experiments:
+
+1. Have your results output to stdout in the docker container.
+   Your stdout will then be saved into the log directory and you can grab them from there.
+2. In a cluster created kuboid, the `/shared` directory is shared by all pods.
+   You can dump your results there if they are large, and mount them magically on your _local machine_ using `kuboid/scripts/mount_nfs`!
+
+Good luck!
+
+### A note about preemption.
+
+If your kubernetes cluster is running on preemtable nodes (for example, in GKE), your pods might just vanish.
+The longer-running your tasks are, the more likely this will be to happen to any given pod.
+Kuboid will reschedule your pods if the node they are running on gets preempted (this is why we don't save logs until a pod completes, in fact), but for long-running tasks, you might want to save snapshots into `/shared` on a regular basis, and restart from them if your pod is rescheduled.
+
 ## Setup
 
 The scripts are designed to reside in your path:
@@ -99,7 +175,7 @@ mkdir completed_logs
 # keep scheduling the uncompleted ones (if they're pre-empted)
 watch 'cat mypods | pods_create -p arbiter -l completed_logs'
 # keep getting the completed logs and removing them
-watch 'pod_names -c | pods_savelog | pods_delete'
+watch 'pod_names -c | pods_savelog my_logs | pods_delete'
 # keep a log of errored and OOM pods
 watch 'pod_names -eof >> errored_pods'
 ```

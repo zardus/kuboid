@@ -1,4 +1,11 @@
 #!/bin/bash -eu
 
 kubectl logs $2 2>&1 > $1/$2
-echo $2
+if grep -ql '^unexpected stream type ""' $1/$2
+then
+	echo "[!] Log for $2 was incorrectly retrieved -- will retry." > /dev/stderr
+	rm -f $1/$2
+	$0 $1 $2
+else
+	echo $2
+fi
