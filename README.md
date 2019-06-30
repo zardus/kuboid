@@ -242,5 +242,8 @@ create_nfs_server
 # if you want to make a shareable kube config
 gcloud container clusters get-credentials seagull
 kubectl create clusterrolebinding default-admin --clusterrole cluster-admin --serviceaccount=default:default
-namespace_config -n some_namespace
+create_kubeconfig some_namespace
+
+# use it!
+for i in $(seq 1 10); do echo echo $i; done | monitor_experiment -k kubeconfig-some_namespace
 ```
