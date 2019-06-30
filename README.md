@@ -16,6 +16,13 @@ If all goes well, there should be an NFS-shared directory mounted in `/shared` i
 
 If you want to get started quick:
 
+### Step 0: get your kube configuration file
+
+You need a kubernetes config file to use kuboid.
+The config file contains all you need to schedule tasks on a kubernetes cluster.
+This cluster can either be created by you (see `Cluster Creation` below) or maintained by someone else.
+Normally, you'd ask your professor or lab cloud admin for it.
+
 ### Step 1: dockerize your experiment!
 
 This is easy!
@@ -55,52 +62,19 @@ Now you're ready to roll!
 Kuboid provides a master script that'll run and monitor your experiment:
 
 ```
-/path/to/kuboid/scripts/monitor_experiment -f /my/file/of/tasks -l kuboid-logs -i my_dockerhub_username/my_experiment
+/path/to/kuboid/scripts/monitor_experiment -k /path/to/my/kube/config -f /my/echo/experiments -l kuboid-logs -i my_dockerhub_username/my_experiment
 ```
 
 `monitor_experiment` will schedule your tasks into kubernetes pods, monitor them for completion, save the logs of your completed pods, and reschedule ones that get deleted because of system failures (or node preemption on cloud services).
-In this example, the tasks will be read from /my/file/of/tasks, but you can also emit the `-f` option to make kuboid read them from stdin.
-More tasks can be added to this file (or to stdin) at runtime!
+You can also omit the `-f` option to make kuboid read tasks from stdin, omit the `-k` option to have kubernetes use either the `KUBECONFIG` environment variable or the `~/.kube/config` file for the kubernetes configuration, and omit the `-l` option to default to the log directory `kuboid-logs`.
+More tasks can be added to the task file (or to stdin) at runtime!
 
-As tasks complete (and only when they complete), their log output will be saved into `kuboid-logs` (or whatever directory you provide via `-l`).
+As tasks complete (and only when they complete), their log output will be saved into `kuboid-logs` (or whatever directory you provide with `-l`).
 This is important: not only can you get the results of your experiments from these logs, but kuboid will consult this directory to figure out whether a pod disappeared because it completed, or whether it disappeared due to a node failure.
 If a log for a pod exists in this directory, the associated task will *not* be (re)run.
 
 Kuboid also provides a lot of scripts for checking on and managing your nodes, other than `monitor_experiment`.
-Check them out below.
-
-Now you're ready for SCIENCE!
-
-### Step 4: getting the results!!!!
-
-There are two ways to get the results of your experiments:
-
-1. Have your results output to stdout in the docker container.
-   Your stdout will then be saved into the log directory and you can grab them from there.
-2. In a cluster created kuboid, the `/shared` directory is shared by all pods.
-   You can dump your results there if they are large, and mount them magically on your _local machine_ using `kuboid/scripts/mount_nfs`!
-
-Good luck!
-
-### A note about preemption.
-
-If your kubernetes cluster is running on preemtable nodes (for example, in GKE), your pods might just vanish.
-The longer-running your tasks are, the more likely this will be to happen to any given pod.
-Kuboid will reschedule your pods if the node they are running on gets preempted (this is why we don't save logs until a pod completes, in fact), but for long-running tasks, you might want to save snapshots into `/shared` on a regular basis, and restart from them if your pod is rescheduled.
-
-## Setup
-
-The scripts are designed to reside in your path:
-
-```
-export PATH=/path/to/kuboid/scripts:$PATH
-```
-
-Alternatively, you can run `setup.sh`, which will put that in your bashrc.
-
-## Pod creation and management
-
-There are some useful scripts to help you create and manage pods for your experiment!
+If you are interested, they are in the `kuboid/scripts` directory:
 
 - `pod_create` - a super simple interface for the creation of a Kubernetes pod! USE THIS!! Also read the help: it has some cool features, like the ability to skip pod creation if you already have completion logs from that pod.
 - `pods_create` - a helper to create multiple pods. Takes commands as lines on stdin and pushes them to `pod_create`
@@ -121,10 +95,48 @@ There are some useful scripts to help you create and manage pods for your experi
 - `pods_loggrep` - takes a list of pods from stdin and greps them for a regex, printing out the pod names that match
 - `pod_delete` - deletes a pod. Make sure to save the pod's logs, as this deletes them.
 - `pods_delete` - takes a list of pods via stdin (for example, from `pod_names`), and deletes them
+- `name_pod` - takes the same arguments as `pod_create` and emits the name of the resulting pod.
+- `name_pods` - takes the same arguments as `pods_create` and emits the name of the resulting pods.
 - `kubesanitize` - sanitizes any string into a form acceptable for a kubernetes entity name (such as a pod)
 - `monitor_experiment` - monitors an experiment, saving logs as pods complete. BROKEN.
 - `set_docer_secret` - sets the dockerhub credentials with which to pull images
 - `mount_nfs` - mounts the cluster's NFS share on the host filesystem
+
+Now you're ready for SCIENCE!
+
+### Step 4: getting the results!!!!
+
+There are three ways to get the results of your experiments:
+
+1. Have your results output to stdout in the docker container.
+   Your stdout will then be saved into the log directory and you can grab them from there.
+2. In a cluster created kuboid, the `/shared` directory is shared by all pods.
+   You can dump your results there if they are large, and mount them magically on your _local machine_ using `kuboid/scripts/mount_nfs`!
+3. You can have your code in your docker image upload results somewhere as they complete.
+   This is generally a pain, because you have to somehow pass credentials around.
+
+My recommendation is: if your results are small and text-based (i.e., number of branches explored in symbolic execution), get them via stdout, and if they're big (i.e., all inputs found using fuzzing), get them via NFS.
+Good luck!
+
+### A note about preemption.
+
+If your kubernetes cluster is running on preemtable nodes (for example, in GKE), your pods might just vanish.
+In fact, that is a reason for the internal complexity of kuboid, as it is.
+The longer-running your tasks are, the more likely this will be to happen to any given pod.
+Kuboid will reschedule your pods if the node they are running on gets preempted (this is why we don't save logs until a pod completes, in fact), but for long-running tasks, you might want to save snapshots into `/shared` on a regular basis, and restart from them if your pod is rescheduled.
+That's something that has to happen in your code (for example, by preiodically tarring an AFL directory to `/shared` and untarring it when the pod starts up).
+
+
+## Setup
+
+It's easier to use kuboid if these scripts reside in your path:
+
+```
+export PATH=/path/to/kuboid/scripts:$PATH
+```
+
+Alternatively, you can run `setup.sh`, which will put that in your bashrc.
+
 
 ## Cluster Administration
 
@@ -135,18 +147,20 @@ There are also scripts to make the cluster admin's life simpler.
 - `nodes_describe` - describes nodes from stdin
 - `node_exec` - executes a command on a node. Requires GCE ssh access.
 - `nodes_exec` - executes a command on many nodes. Requires GCE ssh access.
-- `nodes_idle`
-- `nodes_used`
-- `gce_list`
+- `nodes_idle` - shows a list of nodes that have no pods running on them
+- `nodes_used` - shows a list of nodes that have pods running on them
+- `gce_list` - shows an accounting of your GCE resources (needs you to configure gcloud).
+   If you run your cluster on GCE, I recommend this to avoid spending all your money!
 - `gce_resize`
 - `gce_shared_mount`
 - `gce_shared_ssh`
 - `configure_nfs_server` - creates a shared GCE disk and configures the kubernetes NFS server and replication controller
 - `configure_nfs_volume` - creates the NFS volume and volume claim in the pod namespace
 - `namespace_config` - creates a kubernetes config file, authenticated by token, and customized for a given namespace
-- `afl_tweaks` - applies necessary tweaks to nodes to run AFL. Requires direct GCE ssh access.
+- `afl_tweaks` - applies necessary tweaks to nodes to run AFL.
+  Requires direct GCE ssh access.
 
-## Examples
+## More Examples
 
 Here is an example:
 
