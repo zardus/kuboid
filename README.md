@@ -46,7 +46,7 @@ users:
 ```
 
 This cluster can either be created by you (see `Cluster Creation` below) or maintained by someone else.
-Normally, you'd ask your professor or lab cloud admin for it, and they'd create it with the `kuboid/admin/namespace_config` script.
+Normally, you'd ask your professor or lab cloud admin for it, and they'd create it with the `kuboid/admin/create_kubeconfig` script.
 You don't have to worry about this, but the important thing here is `namespace: NAMESPACE_FOR_YOUR_EXPERIMENTS`: it'll keep your experiments confined to your namespace, and will let multiple users use the same cluster without too much chaos!
 
 ### Step 1: dockerize your experiment!
@@ -182,7 +182,8 @@ There are also scripts to make the cluster admin's life simpler.
 - `gce_shared_ssh`
 - `configure_nfs_server` - creates a shared GCE disk and configures the kubernetes NFS server and replication controller
 - `configure_nfs_volume` - creates the NFS volume and volume claim in the pod namespace
-- `namespace_config` - creates a kubernetes config file, authenticated by token, and customized for a given namespace
+- `create_kubeconfig` - creates a kubernetes config file, authenticated by token, and customized for a given namespace.
+  If necessary, this script will create the necessary namespace, NFS volume, etc.
 - `afl_tweaks` - applies necessary tweaks to nodes to run AFL.
   Requires direct GCE ssh access.
 
