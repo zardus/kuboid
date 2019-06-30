@@ -3,7 +3,7 @@
 function usage
 {
 	cat <<END
-Usage: $0 [-c CPU_REQUEST] [-C CPU_LIMIT] [-m MEMORY_REQUEST] [-M MEMORY_LIMIT] [-v VOLUME] [-i IMAGE] [ -l LOGDIR ] [ -n POD_NAME ] [ -w WORKDIR ] [ -p POD_PREFIX ] COMMAND
+Usage: $0 [-c CPU_REQUEST] [-C CPU_LIMIT] [-m MEMORY_REQUEST] [-M MEMORY_LIMIT] [-i IMAGE] [ -l LOGDIR ] [ -n POD_NAME ] [ -w WORKDIR ] [ -p POD_PREFIX ] COMMAND
 Options:
 	-c CPU_REQUEST		The kubernetes CPU request. Default: 900m (90% of one core, to
 				allow some room for omnipresent tiny kube services)
@@ -86,11 +86,7 @@ mkdir -p $WORKDIR
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 shift $(($OPTIND-1))
 POD_CMD="$@"
-
-POD_NAME=${POD_NAME:-$POD_CMD}
-POD_NAME=${POD_NAME:-$POD_CMD}
-[ -n "$POD_PREFIX" ] && POD_NAME=$POD_PREFIX-$POD_NAME
-POD_NAME=$(echo $POD_NAME | $SCRIPT_DIR/kubesanitize)
+POD_NAME=$($SCRIPT_DIR/name_pod -p "$POD_PREFIX" -n "$POD_NAME" "$@")
 
 if [ -n "$LOGDIR" -a -f $LOGDIR/$POD_NAME ]
 then

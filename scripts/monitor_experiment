@@ -4,20 +4,23 @@ AFL_TWEAKS=0
 SAVE_LOGS=0
 
 LOG_DIRECTORY=kuboid-logs
-TASK_FILE=/dev/stdin
+TASK_FILE=
 
 function usage
 {
 	cat <<END
-$0 [-o LOG_DIRECTORY] [-f TASK_FILE] [ARGS_FOR_POD_CREATE]
+$0 [-o LOG_DIRECTORY] [-f TASK_FILE] [-k KUBECONFIG] [ARGS_FOR_POD_CREATE]
 
 Options:
 	-l	The directory to save logs to (default: $LOG_DIRECTORY).
 	-f	The file containing tasks to run (one per line). This will be given
 		as the argument on the commandline to your kubernetes pod.
-		Default: $TASK_FILE.
+		Default: stdin.
+	-k	Use the provided path for the kube config file. This can also
+		be set using the KUBECONFIG environment variable or, as a fall-back,
+		the ~/.kube/config file.
 
-The rest of the args will be provided to the pod_create script during pod creation.
+All other arguments will be provided to the pod_create script during pod creation.
 See pod_create -h for more info.
 END
 	exit 1
@@ -26,9 +29,12 @@ END
 echo -n "" > /tmp/kuboid-$$.jobs
 
 OPTERR=0
-while getopts "l:f:h" OPT
+while getopts "k:l:f:h" OPT
 do
 	case $OPT in
+		k)
+			export KUBECONFIG=$OPTARG
+			;;
 		l)
 			LOG_DIRECTORY=$OPTARG
 			;;
@@ -53,48 +59,89 @@ mkdir -p $LOG_DIRECTORY
 
 function get_tasks
 {
-	echo "[*] Reading tasks from $TASK_FILE."
-	timeout 5 cat /tmp/kuboid-$$.jobs $TASK_FILE | sort -u > /tmp/kuboid-$$.jobs~
+	echo "[*] Reading tasks from ${TASK_FILE+/dev/stdin}."
+	if [ -n "$TASK_FILE" ]
+	then
+		cat /tmp/kuboid-$$.jobs $TASK_FILE
+	else
+		cat /tmp/kuboid-$$.jobs
+		while read -t1 TASK
+		do
+			echo $TASK
+		done
+	fi | sort -u > /tmp/kuboid-$$.jobs~
 	mv /tmp/kuboid-$$.jobs~ /tmp/kuboid-$$.jobs
+	cat /tmp/kuboid-$$.jobs | $SCRIPT_DIR/name_pods "$@" > /tmp/kuboid-$$.pods
 }
+
+function calc_progress
+{
+	TOTAL=$(cat /tmp/kuboid-$$.pods | wc -l)
+	COMPLETED=$(ls $LOG_DIRECTORY | sort -u | comm -12 /dev/stdin /tmp/kuboid-$$.pods | wc -l)
+	NOT_COMPLETED=$(ls $LOG_DIRECTORY | sort -u | comm -13 /dev/stdin /tmp/kuboid-$$.pods | wc -l)
+	UNEXPECTED=$(ls $LOG_DIRECTORY | sort -u | comm -23 /dev/stdin /tmp/kuboid-$$.pods | wc -l)
+}
+
+get_tasks "$@"
+calc_progress
 
 if [ $(ls $LOG_DIRECTORY | wc -l) -gt 0 ]
 then
-	echo "[!] WARNING  |"
-	echo "[!] WARNING  |"
-	echo "[!] WARNING \\|/"
-	echo "[!] WARNING  V"
+	echo "[!]"
+	echo "[!]                         WARNING  |  WARNING"
+	echo "[!]                         WARNING  |  WARNING"
+	echo "[!]                         WARNING \\|/ WARNING"
+	echo "[!]                         WARNING  V  WARNING"
+	echo "[!]"
 	echo "[!] Your log directory ($LOG_DIRECTORY) is NOT EMPTY. This means that pods"
 	echo "[!] with the same name as files in that directory will be assumed to have"
 	echo "[!] already been run and WILL NOT BE RE-SCHEDULED. If you're resuming an"
 	echo "[!] experiment, this is okay, but make sure to know what you're doing."
-	echo "[!] WARNING  ^"
-	echo "[!] WARNING /|\\"
-	echo "[!] WARNING  |"
-	echo "[!] WARNING  |"
+	echo "[!]"
+	echo "[!] Specifically, this is our current status based on the present log files in this:"
+	echo "[!]"
+	echo "[!] TOTAL JOBS:           $TOTAL"
+	echo "[!] COMPLETED JOBS:       $COMPLETED"
+	echo "[!] NOT COMPLETED JOBS:   $NOT_COMPLETED"
+	echo "[!] UNEXPECTED LOGS:      $UNEXPECTED"
+	echo "[!]"
+	echo "[!] If you are resuming an experiment, and UNEXPECTED LOGS is not 0, then there has"
+	echo "[!] been a chance of pod names. If this is unexpected to you, something is wrong."
+	echo "[!] In either case, the COMPLETED pods will not be re-scheduled."
+	echo "[!]"
+	echo "[!]                         WARNING  ^  WARNING"
+	echo "[!]                         WARNING /|\\ WARNING"
+	echo "[!]                         WARNING  |  WARNING"
+	echo "[!]                         WARNING  |  WARNING"
+	echo "[!]"
 fi
 
 while true
 do
-	get_tasks
 	echo "[*] Statistics:"
-	TOTAL=$(cat /tmp/kuboid-$$.jobs | wc -l)
-	COMPLETED=$(ls $LOG_DIRECTORY | wc -l)
 	echo "[-] TOTAL JOBS:           $TOTAL"
 	echo "[-] COMPLETED JOBS:       $COMPLETED"
+	echo "[-] NOT COMPLETED JOBS:   $NOT_COMPLETED"
+	echo "[-] UNEXPECTED LOGS:      $UNEXPECTED"
 
 	if [ $TOTAL -eq $COMPLETED ]
 	then
 		echo "[*] All done!"
-		rm -f /tmp/kuboid-$$.jobs
+		rm -f /tmp/kuboid-$$.*
 		exit 0
 	fi
 
-	echo "[*] Making sure all pods are scheduled..."
-	cat /tmp/kuboid-$$.jobs | $SCRIPT_DIR/pods_create -l $LOG_DIRECTORY "$@" || true
-	echo "[*] Checking for completed pods..."
-	echo "[*] $($SCRIPT_DIR/pod_names -c | $SCRIPT_DIR/pods_savelog $LOG_DIRECTORY | $SCRIPT_DIR/pods_delete | wc -l) jobs have just completed."
+	echo "[*] Current cluster status:"
+	$SCRIPT_DIR/pod_states
 
-	echo "[*] Sleeping for 5 seconds..."
-	sleep 5
+	echo "[*] Making sure all pods are scheduled..."
+	cat /tmp/kuboid-$$.jobs | ( $SCRIPT_DIR/pods_create -l $LOG_DIRECTORY "$@" 2>&1 | grep -v "already exists" | grep -v "already there" ) || true
+	echo "[*] Checking for completed pods..."
+	echo "[*] $($SCRIPT_DIR/pod_names -cs | $SCRIPT_DIR/pods_savelog $LOG_DIRECTORY | $SCRIPT_DIR/pods_delete | wc -l) jobs have just completed."
+
+	#echo "[*] Sleeping for 5 seconds..."
+	#sleep 5
+
+	get_tasks "$@"
+	calc_progress
 done

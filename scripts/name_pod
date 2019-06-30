@@ -1,0 +1,46 @@
+#!/bin/bash -eu
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+function usage
+{
+	cat <<END
+$0 puts together names for your pods.
+
+Usage: $0 [ -n POD_NAME ] [ -p POD_PREFIX ] COMMAND
+Options:
+	-n POD_NAME		Override the command-derived pod name to this value.
+	-p POD_PREFIX		A string to prefix the pod names. Makes mass-scheduling different
+				parts of an experiment easier.
+	COMMAND			The command that will run on execution.
+
+All options can also be specified via environment variables (i.e.: POD_PREFIX=mypods ./pod_create echo hello).
+END
+}
+
+POD_NAME=${POD_NAME-}
+POD_PREFIX=${POD_PREFIX-}
+while getopts $(cat $SCRIPT_DIR/pod_create | grep getopt | awk '{print $3}' | tr -d '"') OPT
+do
+	case $OPT in
+		n)
+			[ -n "$OPTARG" ] && POD_NAME=$OPTARG
+			;;
+		p)
+			[ -n "$OPTARG" ] && POD_PREFIX=$OPTARG
+			;;
+		?)
+			;;
+		*)
+			usage
+			exit 0
+			;;
+	esac
+done
+shift $(($OPTIND-1))
+POD_CMD="$@"
+
+POD_NAME=${POD_NAME:-$POD_CMD}
+[ -n "$POD_PREFIX" ] && POD_NAME=$POD_PREFIX-$POD_NAME
+echo $POD_NAME | $SCRIPT_DIR/kubesanitize
+echo
