@@ -20,8 +20,34 @@ If you want to get started quick:
 
 You need a kubernetes config file to use kuboid.
 The config file contains all you need to schedule tasks on a kubernetes cluster.
+This is an example kube config file, for reference:
+
+```
+apiVersion: v1
+clusters:
+- cluster:
+    certificate-authority-data: SECRET==
+    server: https://CLUSTER_IP
+  name: YOUR_CLUSTER_NAME
+contexts:
+- context:
+    cluster: YOUR_CLUSTER_NAME
+    namespace: NAMESPACE_FOR_YOUR_EXPERIMENTS
+    user: YOUR_CLUSTER_NAME
+  name: YOUR_CLUSTER_NAME
+current-context: YOUR_CLUSTER_NAME
+kind: Config
+preferences: {}
+users:
+- name: YOUR_CLUSTER_NAME
+  user:
+    token: SECRET==
+
+```
+
 This cluster can either be created by you (see `Cluster Creation` below) or maintained by someone else.
-Normally, you'd ask your professor or lab cloud admin for it.
+Normally, you'd ask your professor or lab cloud admin for it, and they'd create it with the `kuboid/admin/namespace_config` script.
+You don't have to worry about this, but the important thing here is `namespace: NAMESPACE_FOR_YOUR_EXPERIMENTS`: it'll keep your experiments confined to your namespace, and will let multiple users use the same cluster without too much chaos!
 
 ### Step 1: dockerize your experiment!
 
