@@ -99,6 +99,8 @@ As tasks complete (and only when they complete), their log output will be saved 
 This is important: not only can you get the results of your experiments from these logs, but kuboid will consult this directory to figure out whether a pod disappeared because it completed, or whether it disappeared due to a node failure.
 If a log for a pod exists in this directory, the associated task will *not* be (re)run.
 
+### Detour: other useful scripts
+
 Kuboid also provides a lot of scripts for checking on and managing your nodes, other than `monitor_experiment`.
 If you are interested, they are in the `kuboid/scripts` directory:
 
