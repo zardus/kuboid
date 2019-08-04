@@ -1,17 +1,34 @@
-#!/bin/bash -eu
+#!/bin/bash
 
-GCE_CLUSTER_NAME=${GCE_CLUSTER_NAME-seagull}
+mkdir -p /tmp/$$
 
-#echo "[*] Node Pools"
-#gcloud container node-pools list --cluster $GCE_CLUSTER_NAME
+echo "[#] $(date +%Y.%m.%d) report for project: $(gcloud config get-value project)"
 
-echo "[#] Report for project: $(gcloud config get-value project)"
-echo "[#] $(date +%Y.%m.%d)"
+kubectl get pods --all-namespaces | tail -n+2 | awk '{print $1}' | egrep -v "^(default|kube-system)$"> /tmp/$$/pods
+
+gcloud compute instances list | grep -E "STATUS|RUNNING" > /tmp/$$/instances
+cat /tmp/$$/instances | grep " true " > /tmp/$$/preemptible
+cat /tmp/$$/instances | grep -v " true " | tail -n+2 > /tmp/$$/non-preemptible 
+P_COUNT=$(wc -l < /tmp/$$/preemptible)
+N_COUNT=$(wc -l < /tmp/$$/non-preemptible)
+P_CORES=$(( $( ( cat /tmp/$$/preemptible | grep custom | awk '{print $4}' | tr -d '('; cat /tmp/$$/preemptible | grep -v custom | awk '{print $3}' | grep "^n" | awk --field-separator '-' '{print $3}' ) | paste -sd+) ))
+N_CORES=$(( $( ( cat /tmp/$$/non-preemptible | grep custom | awk '{print $4}' | tr -d '('; cat /tmp/$$/non-preemptible | grep -v custom | awk '{print $3}' | grep "^n" | awk --field-separator '-' '{print $3}' ) | paste -sd+) ))
 
 echo ""
-echo "[*] Instances"
-gcloud compute instances list | grep -E "STATUS|RUNNING"
+echo "[#] Cost summary:"
+echo "[*] $N_CORES normal cores, across $N_COUNT instances"
+echo "[*] $P_CORES preemptible cores, across $P_COUPT instances"
 
 echo ""
-echo "[*] Disks"
-gcloud compute disks list
+echo "[*] Pods per namespace (total $(cat /tmp/$$/pods | wc -l))"
+cat /tmp/$$/pods | sort | uniq -c
+
+echo ""
+echo "[*] Normal instances ($N_CORES cores, $N_COUNT instances)"
+cat /tmp/$$/non-preemptible
+
+echo ""
+echo "[*] Preemptible instances ($P_CORES cores, $P_COUNT instances)"
+cat /tmp/$$/preemptible
+
+rm -rf /tmp/$$
