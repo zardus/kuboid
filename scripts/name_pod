@@ -42,5 +42,6 @@ POD_CMD="$@"
 
 POD_NAME=${POD_NAME:-$POD_CMD}
 [ -n "$POD_PREFIX" ] && POD_NAME=$POD_PREFIX-$POD_NAME
-echo $POD_NAME | $SCRIPT_DIR/kubesanitize
-echo
+POD_NAME=$(echo $POD_NAME | $SCRIPT_DIR/kubesanitize)
+POD_NAME=${POD_NAME:${#POD_NAME}<63?0:-63}
+echo $POD_NAME
