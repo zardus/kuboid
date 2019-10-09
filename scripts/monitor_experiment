@@ -71,7 +71,7 @@ function get_tasks
 		done
 	fi | sort -u > /tmp/kuboid-$$.jobs~
 	mv /tmp/kuboid-$$.jobs~ /tmp/kuboid-$$.jobs
-	cat /tmp/kuboid-$$.jobs | $SCRIPT_DIR/name_pods "$@" > /tmp/kuboid-$$.pods
+	cat /tmp/kuboid-$$.jobs | $SCRIPT_DIR/name_pods "$@" | sort -u > /tmp/kuboid-$$.pods
 }
 
 function calc_progress
@@ -135,7 +135,8 @@ do
 	$SCRIPT_DIR/pod_states
 
 	echo "[*] Making sure all pods are scheduled..."
-	cat /tmp/kuboid-$$.jobs | ( $SCRIPT_DIR/pods_create -l $LOG_DIRECTORY "$@" 2>&1 | grep -v "already exists" | grep -v "already there" ) || true
+	#cat /tmp/kuboid-$$.jobs | ( $SCRIPT_DIR/pods_create -l $LOG_DIRECTORY "$@" 2>&1 | grep -v "already exists" | grep -v "already there" ) || true
+	cat /tmp/kuboid-$$.jobs | ( $SCRIPT_DIR/pods_create -l $LOG_DIRECTORY "$@" 2>&1 ) || true
 	echo "[*] Checking for completed pods..."
 	echo "[*] $($SCRIPT_DIR/pod_names -cs | $SCRIPT_DIR/pods_savelog $LOG_DIRECTORY | $SCRIPT_DIR/pods_delete | wc -l) jobs have just completed."
 
