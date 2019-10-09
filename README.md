@@ -1,10 +1,10 @@
 # kuboid - making kubernetes less painful for large experiments
 
 This platform is designed to ease scientific experiments run in a distributed fashion through kubernetes.
-Distributed scientific experiments (at least, the ones this framework targes) should be defined by the following properties:
+Distributed scientific experiments (at least, the ones this framework targets) should be defined by the following properties:
 
 - they are parallelizable
-- they can be run from a common docker image, with just a different command argument (i.e., a program name or a URL) definiting different members of the experiment dataset
+- they can be run from a common docker image, with just a different command argument (i.e., a program name or a URL) defining different members of the experiment dataset
 - they produce output that can either be dumped on a shared NFS drive or simply exfiltrated via stdout
 
 kuboid is made to make such experiments easier by enabling mass creation, management, and deletion of kubernetes pods.
@@ -53,9 +53,9 @@ You don't have to worry about this, but the important thing here is `namespace: 
 
 This is easy!
 Simply create a dockerfile that has all the code your experiment needs.
-You can also dump the data in there, but that'll likely make your docker image big and unyieldy.
+You can also dump the data in there, but that'll likely make your docker image big and unwieldy.
 My advice is to keep the data somewhere else.
-For example, I pushed the CGC binaries I used to experiment on to a github repo (https://github.com/zardus/cgc-bins) and used to pull them down in my experiment script.
+For example, I pushed the CGC binaries I used to experiment on to a GitHub repo (https://github.com/zardus/cgc-bins) and used to pull them down in my experiment script.
 
 When your dockerfile is done, you'll push it to dockerhub:
 
@@ -152,7 +152,7 @@ If your kubernetes cluster is running on preemtable nodes (for example, in GKE),
 In fact, that is a reason for the internal complexity of kuboid, as it is.
 The longer-running your tasks are, the more likely this will be to happen to any given pod.
 Kuboid will reschedule your pods if the node they are running on gets preempted (this is why we don't save logs until a pod completes, in fact), but for long-running tasks, you might want to save snapshots into `/shared` on a regular basis, and restart from them if your pod is rescheduled.
-That's something that has to happen in your code (for example, by preiodically tarring an AFL directory to `/shared` and untarring it when the pod starts up).
+That's something that has to happen in your code (for example, by periodically tarring an AFL directory to `/shared` and untarring it when the pod starts up).
 
 
 ## Setup
