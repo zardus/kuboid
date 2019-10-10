@@ -157,14 +157,15 @@ That's something that has to happen in your code (for example, by periodically t
 
 ## Setup
 
-It's easier to use kuboid if these scripts reside in your path:
+To run the kuboid scripts, you will first need to install kubectl; follow the [official documentation](https://kubernetes.io/docs/tasks/tools/install-kubectl/) for details on how to do this.
+
+You can then add the path to kuboid scripts to your `$PATH` environment variable:
 
 ```
 export PATH=/path/to/kuboid/scripts:$PATH
 ```
 
-Alternatively, you can run `setup.sh`, which will put that in your bashrc.
-
+Alternatively, you can run `setup.sh`, which will put that in your `.bashrc` file to automatically run when you launch a new shell.
 
 ## Cluster Administration
 
