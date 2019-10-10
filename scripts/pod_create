@@ -12,6 +12,7 @@ Options:
 	-m MEMORY_REQUEST	The kubernetes memory request. Default: 2Gi (2048 megabytes)
 	-M MEMORY_LIMIT		The kubernetes memory limit. Default: 4Gi (4096 megabytes)
 	-N 			Don't mount an NFS share in /shared.
+	-P 			Make the pod privileged (unless your credentials forbid it).
 	-i IMAGE		The Docker image to pull.
 	-l LOGDIR		A directory to check for completion logs of pods. If a log is found
 				for a pod, the pod will not be created. Eases re-running missing
@@ -39,8 +40,9 @@ POD_NAME=${POD_NAME-}
 POD_PREFIX=${POD_PREFIX-}
 WORKDIR=${WORKDIR-}
 NONFS=${NONFS:-0}
+PRIVILEGED=false
 
-while getopts "c:C:m:M:l:n:i:w:p:N" OPT
+while getopts "c:C:m:M:l:n:i:w:p:NP" OPT
 do
 	case $OPT in
 		c)
@@ -63,6 +65,9 @@ do
 			;;
 		N)
 			NONFS=1
+			;;
+		P)
+			PRIVILEGED=true
 			;;
 		n)
 			POD_NAME=$OPTARG
@@ -123,6 +128,8 @@ spec:
         requests:
           cpu: $CPU_REQUEST
           memory: $MEMORY_REQUEST
+      securityContext:
+        privileged: $PRIVILEGED
   restartPolicy: Never
   imagePullSecrets:
     - name: docker-secret
