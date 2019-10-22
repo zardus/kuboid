@@ -17,6 +17,9 @@ Options:
 	-l LOGDIR		A directory to check for completion logs of pods. If a log is found
 				for a pod, the pod will not be created. Eases re-running missing
 				parts of large experiments.
+	-e ENV_VAR 		Specify value of environment variable that is required to be accessed
+				inside the pod. By default, the environment variable that will be set 
+				is BIN_NAME.
 	-n POD_NAME		The name of the pod. If not provided, this will be automatically
 				generated from the given command.
 	-w WORKDIR		A temporary directory to create the yml files describing the pods.
@@ -40,9 +43,10 @@ POD_NAME=${POD_NAME-}
 POD_PREFIX=${POD_PREFIX-}
 WORKDIR=${WORKDIR-}
 NONFS=${NONFS:-0}
+ENV_VAR=${ENV_VAR:-}
 PRIVILEGED=false
 
-while getopts "c:C:m:M:l:n:i:w:p:NP" OPT
+while getopts "c:C:m:M:l:n:e:i:w:p:NP" OPT
 do
 	case $OPT in
 		c)
@@ -78,6 +82,9 @@ do
 		w)
 			WORKDIR=$OPTARG
 			;;
+		e) 
+			ENV_VAR=$OPTARG
+                        ;;
 		*)
 			usage
 			exit 0
@@ -118,6 +125,9 @@ spec:
       imagePullPolicy: Always
       stdin: true
       tty: true
+      env:
+        - name: BIN_NAME
+          value: $ENV_VAR
       volumeMounts:
         - name: shared
           mountPath: "/shared"
