@@ -241,7 +241,7 @@ gcloud container node-pools create as-pre-8cpu-64gb-100hdd --cluster seagull --p
 gcloud container clusters resize seagull --size=1 --node-pool=as-pre-8cpu-64gb-100hdd
 
 # create the NFS configuration
-create_nfs_server
+configure_nfs_server
 
 # if you want to make a shareable kube config
 gcloud container clusters get-credentials seagull
