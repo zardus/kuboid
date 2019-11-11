@@ -1,0 +1,12 @@
+#!/bin/bash -x
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+ARGS=( "$@" )
+LOG_DIR="${ARGS[-1]}"
+unset "ARGS[${#ARGS[@]}-1]"
+
+while true
+do
+	$SCRIPT_DIR/pod_names $ARGS | $SCRIPT_DIR/pods_savelog -d $LOG_DIR
+done
