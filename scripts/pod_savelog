@@ -1,11 +1,61 @@
 #!/bin/bash -eu
 
-kubectl logs $2 2>&1 > $1/$2
-if grep -ql '^unexpected stream type ""' $1/$2
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+function usage
+{
+        cat <<END
+$0 [-f] [-d] LOG_DIRECTORY POD_NAME
+
+Options:
+        -f      Overwrite any existing logs.
+        -d      Delete the pod after saving the logs.
+END
+        exit 1
+}
+
+OPTERR=0
+OVERRIDE=0
+DELETE=0
+while getopts "fd" OPT
+do
+        case $OPT in
+                f)
+                        OVERRIDE=1
+                        ;;
+                d)
+                        DELETE=1
+                        ;;
+                h)
+                        usage
+                        ;;
+                ?)
+                        OPTIND=$(($OPTIND-1))
+                        break
+                        ;;
+        esac
+done
+shift $((OPTIND-1))
+
+[ -e $1/$2 -a "$OVERRIDE" -eq 0 ] && exit
+
+if kubectl logs $2 > $1/$2
 then
-	echo "[!] Log for $2 was incorrectly retrieved -- will retry." > /dev/stderr
-	rm -f $1/$2
-	$0 $1 $2
+	if grep -ql '^unexpected stream type ""' $1/$2
+	then
+		echo "[!] Log for $2 was incorrectly retrieved -- will retry." > /dev/stderr
+		rm -f $1/$2
+		$0 $1 $2
+	else
+		if [ "$DELETE" -eq 1 ]
+		then
+			$SCRIPT_DIR/pod_delete $2
+		else
+			echo $2
+		fi
+		exit 0
+	fi
 else
-	echo $2
+	rm -f $1/$2
 fi
+exit 1
