@@ -4,7 +4,7 @@ AFL_TWEAKS=0
 SAVE_LOGS=0
 
 LOG_DIRECTORY=kuboid-logs
-TASK_FILE=
+TASK_FILE=/dev/stdin
 
 function usage
 {
@@ -59,7 +59,7 @@ mkdir -p $LOG_DIRECTORY
 
 function get_tasks
 {
-	echo "[*] Reading tasks from ${TASK_FILE+/dev/stdin}."
+	echo "[*] Reading tasks from ${TASK_FILE}."
 	if [ -n "$TASK_FILE" ]
 	then
 		cat /tmp/kuboid-$$.jobs $TASK_FILE
@@ -106,7 +106,7 @@ then
 	echo "[!] UNEXPECTED LOGS:      $UNEXPECTED"
 	echo "[!]"
 	echo "[!] If you are resuming an experiment, and UNEXPECTED LOGS is not 0, then there has"
-	echo "[!] been a chance of pod names. If this is unexpected to you, something is wrong."
+	echo "[!] been a change of pod names. If this is unexpected to you, something is wrong."
 	echo "[!] In either case, the COMPLETED pods will not be re-scheduled."
 	echo "[!]"
 	echo "[!]                         WARNING  ^  WARNING"
@@ -131,12 +131,20 @@ do
 		exit 0
 	fi
 
+	set +e
+
 	echo "[*] Current cluster status:"
 	$SCRIPT_DIR/pod_states
 
+	echo "[*] Checking scheduled pods..."
+	pod_names > /tmp/kuboid-$$.existing
 	echo "[*] Making sure all pods are scheduled..."
-	#cat /tmp/kuboid-$$.jobs | ( $SCRIPT_DIR/pods_create -l $LOG_DIRECTORY "$@" 2>&1 | grep -v "already exists" | grep -v "already there" ) || true
-	cat /tmp/kuboid-$$.jobs | ( $SCRIPT_DIR/pods_create -l $LOG_DIRECTORY "$@" 2>&1 ) || true
+	cat /tmp/kuboid-$$.jobs | ( $SCRIPT_DIR/pods_create -l $LOG_DIRECTORY -s /tmp/kuboid-$$.existing "$@" 2>&1 ) > /tmp/kuboid-$$.creation
+	echo "[*] Scheduling results:"
+	echo "[-] Already completed: $(cat /tmp/kuboid-$$.creation | grep "already exists" | wc -l)"
+	echo "[-] Already scheduled (known): $(cat /tmp/kuboid-$$.creation | grep "already scheduled" | wc -l)"
+	echo "[-] Already scheduled (unknown): $(cat /tmp/kuboid-$$.creation | grep "already there" | wc -l)"
+	echo "[-] Created: $(cat /tmp/kuboid-$$.creation | grep "created" | wc -l)"
 	echo "[*] Checking for completed pods..."
 	echo "[*] $($SCRIPT_DIR/pod_names -cs | $SCRIPT_DIR/pods_savelog $LOG_DIRECTORY | $SCRIPT_DIR/pods_delete | wc -l) jobs have just completed."
 
@@ -144,5 +152,6 @@ do
 	#sleep 5
 
 	get_tasks "$@"
+	set -e
 	calc_progress
 done
