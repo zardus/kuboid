@@ -1,1 +1,4 @@
-../admin/workbench_parallel_helper_last
+#!/bin/bash -eu
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+awk '{print $NF}' | xargs -d'\n' basename -a | $SCRIPT_DIR/kubesanitize
