@@ -127,8 +127,10 @@ If you are interested, they are in the `kuboid/scripts` directory:
 - `name_pods` - takes the same arguments as `pods_create` and emits the name of the resulting pods.
 - `kubesanitize` - sanitizes any string into a form acceptable for a kubernetes entity name (such as a pod)
 - `monitor_experiment` - monitors an experiment, saving logs as pods complete. BROKEN.
-- `set_docer_secret` - sets the dockerhub credentials with which to pull images
+- `set_docker_secret` - sets the dockerhub credentials with which to pull images
 - `mount_nfs` - mounts the cluster's NFS share on the host filesystem
+- `reaper` - cleans up pods with certain properties, saving their logs
+- `sower` - deploys preempted or unscheduled tasks for your experiment
 
 Now you're ready for SCIENCE!
 
@@ -230,7 +232,7 @@ Here's an example to create a cluster:
 
 ```
 # create the cluster (private IPs --- NO INTERNET ACCESS)
-gcloud container clusters create seagull --enable-ip-alias  --enable-private-nodes --no-enable-master-authorized-networks --create-subnetwork name=seagull-network --master-ipv4-cidr 172.16.0.0/28 --preemptible --enable-autoscaling --max-nodes=512 --min-nodes=0 --machine-type=n1-highmem-8
+gcloud container clusters create seagull --no-enable-cloud-logging --enable-ip-alias  --enable-private-nodes --no-enable-master-authorized-networks --create-subnetwork name=seagull-network --master-ipv4-cidr 172.16.0.0/28 --preemptible --enable-autoscaling --max-nodes=512 --min-nodes=0 --machine-type=n1-highmem-8
 # create the cluster (public IPs)
 gcloud container clusters create seagull --preemptible --disk-size=100GB --enable-autoscaling --min-nodes=1 --max-nodes=512 --num-nodes 1 --machine-type=n1-highmem-8
 
