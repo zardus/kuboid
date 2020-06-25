@@ -1,0 +1,21 @@
+#!/bin/bash -u
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+LIST=$1
+LOG_DIRECTORY=$2
+shift
+shift
+
+while true
+do
+	echo "[*] Checking scheduled pods..."
+	pod_names > /tmp/kuboid-$$.existing
+	echo "[*] Making sure all pods are scheduled..."
+	cat $LIST | ( $SCRIPT_DIR/pods_create -l $LOG_DIRECTORY -s /tmp/kuboid-$$.existing "$@" 2>&1 ) > /tmp/kuboid-$$.creation
+	echo "[*] Scheduling results:"
+	echo "[-] Already completed: $(cat /tmp/kuboid-$$.creation | grep "completion log" | wc -l)"
+	echo "[-] Already scheduled (known): $(cat /tmp/kuboid-$$.creation | grep "already scheduled" | wc -l)"
+	echo "[-] Already scheduled (unknown): $(cat /tmp/kuboid-$$.creation | grep "already exists" | wc -l)"
+	echo "[-] Created: $(cat /tmp/kuboid-$$.creation | grep "created" | wc -l)"
+done

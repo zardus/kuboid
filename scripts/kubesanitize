@@ -7,4 +7,4 @@ then
 	echo "$*"
 else
 	cat
-fi | tr " " "-" | tr -d -C '[:alnum:]-' | tr '[:upper:]' '[:lower:]'
+fi | tr " _,.+" "----+" | tr -d -C '[:alnum:]-\n' | tr '[:upper:]' '[:lower:]'

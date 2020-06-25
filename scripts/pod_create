@@ -17,6 +17,8 @@ Options:
 	-l LOGDIR		A directory to check for completion logs of pods. If a log is found
 				for a pod, the pod will not be created. Eases re-running missing
 				parts of large experiments.
+	-s SCHEDULED_LIST	A file containing a list of scheduled pods, to avoid trying to
+				re-create a scheduled pod.
 	-n POD_NAME		The name of the pod. If not provided, this will be automatically
 				generated from the given command.
 	-w WORKDIR		A temporary directory to create the yml files describing the pods.
@@ -30,6 +32,7 @@ END
 }
 
 LOGDIR=${LOGDIR-}
+SCHEDULED_LIST=${SCHEDULED_LIST-}
 NFS=${NFS-}
 IMAGE=${IMAGE-ubuntu}
 CPU_REQUEST=${CPU_REQUEST:-900m}
@@ -42,7 +45,7 @@ WORKDIR=${WORKDIR-}
 NONFS=${NONFS:-0}
 PRIVILEGED=false
 
-while getopts "c:C:m:M:l:n:i:w:p:NP" OPT
+while getopts "c:C:m:M:l:n:i:w:p:s:NP" OPT
 do
 	case $OPT in
 		c)
@@ -75,6 +78,9 @@ do
 		p)
 			POD_PREFIX=$OPTARG
 			;;
+		s)
+			SCHEDULED_LIST=$OPTARG
+			;;
 		w)
 			WORKDIR=$OPTARG
 			;;
@@ -96,6 +102,12 @@ POD_NAME=$($SCRIPT_DIR/name_pod -p "$POD_PREFIX" -n "$POD_NAME" "$@")
 if [ -n "$LOGDIR" -a -f $LOGDIR/$POD_NAME ]
 then
 	echo "[*] Skipping $POD_NAME creation because the completion log is already there."
+	exit
+fi
+
+if [ -n "$SCHEDULED_LIST" ] && grep -q ^$POD_NAME$ $SCHEDULED_LIST
+then
+	echo "[*] Skipping $POD_NAME because it's already scheduled."
 	exit
 fi
 
