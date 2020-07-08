@@ -66,26 +66,34 @@ fi
 if kubectl -n $NAMESPACE describe pod nfs-server >/dev/null 2>/dev/null
 then
 	echo "[*] NFS service already exists. To delete:"
-	echo "> kubectl -n $NAMESPACE delete rc nfs-server"
-	echo "> kubectl -n $NAMESPACE service rc nfs-server"
+	echo "> kubectl -n $NAMESPACE delete deploy nfs-server"
+	echo "> kubectl -n $NAMESPACE delete service nfs-service"
 else
 	echo "[*] Creating NFS server."
 
-	cat <<END > $WORKDIR/setup/gce_nfs_rc.yml
-apiVersion: v1
-kind: ReplicationController
+	cat <<END > $WORKDIR/setup/gce_nfs_deploy.yml
+apiVersion: apps/v1
+kind: Deployment
 metadata:
   name: nfs-server
   namespace: $NAMESPACE
 spec:
   replicas: 1
   selector:
-    role: nfs-server
+    matchLabels:
+      role: nfs-server
   template:
     metadata:
       labels:
         role: nfs-server
     spec:
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+            - matchExpressions:
+              - key: gke-preemptible
+                operator: DoesNotExist
       containers:
       - name: nfs-server
         image: gcr.io/google-samples/nfs-server:1.1
@@ -126,8 +134,8 @@ spec:
     role: nfs-server
 END
 
-	#kubectl delete -f $WORKDIR/setup/gce_nfs_rc.yml || echo "[+] No NFS RC to delete..."
+	#kubectl delete -f $WORKDIR/setup/gce_nfs_deploy.yml || echo "[+] No NFS RC to delete..."
 	#kubectl delete -f $WORKDIR/setup/gce_nfs_service.yml || echo "[+] No NFS service to delete..."
-	kubectl create -f $WORKDIR/setup/gce_nfs_rc.yml || echo "[+] NFS RC already existed..."
+	kubectl create -f $WORKDIR/setup/gce_nfs_deploy.yml || echo "[+] NFS RC already existed..."
 	kubectl create -f $WORKDIR/setup/gce_nfs_service.yml || echo "[+] NFS service already existed..."
 fi

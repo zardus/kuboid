@@ -232,15 +232,14 @@ Here's an example to create a cluster:
 
 ```
 # create the cluster (private IPs --- NO INTERNET ACCESS)
-gcloud container clusters create seagull --no-enable-cloud-logging --enable-ip-alias  --enable-private-nodes --no-enable-master-authorized-networks --create-subnetwork name=seagull-network --master-ipv4-cidr 172.16.0.0/28 --preemptible --enable-autoscaling --max-nodes=512 --min-nodes=0 --machine-type=n1-highmem-8
+gcloud container clusters create seagull --no-enable-cloud-logging --enable-ip-alias  --enable-private-nodes --no-enable-master-authorized-networks --create-subnetwork name=seagull-network --master-ipv4-cidr 172.16.0.0/28 --machine-type=n1-standard-1
 # create the cluster (public IPs)
-gcloud container clusters create seagull --preemptible --disk-size=100GB --enable-autoscaling --min-nodes=1 --max-nodes=512 --num-nodes 1 --machine-type=n1-highmem-8
+gcloud container clusters create seagull --no-enable-cloud-logging --disk-size=50GB --num-nodes 1 --machine-type=n1-standard-1
 
-# if you change your mind about the pool later, recreate it
-gcloud container node-pools delete default-pool
-gcloud container node-pools create as-pre-8cpu-64gb-100hdd --cluster seagull --preemptible --disk-size=100GB --enable-autoscaling --min-nodes 1 --max-nodes 500 --num-nodes 1 --machine-type n2-highmem-8
+# you can add an autoscaling pool to make be able to compute things
+gcloud container node-pools create as-pre-8c-64g-100hdd --cluster seagull --preemptible --disk-size=100GB --enable-autoscaling --min-nodes 1 --max-nodes 500 --num-nodes 1 --machine-type n2-highmem-8
 
-gcloud container clusters resize seagull --size=1 --node-pool=as-pre-8cpu-64gb-100hdd
+gcloud container clusters resize seagull --size=1 --node-pool=as-pre-8c-64g-100hdd
 
 # create the NFS configuration
 configure_nfs_server
