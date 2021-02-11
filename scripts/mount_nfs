@@ -1,19 +1,60 @@
-#!/bin/bash
+#!/bin/bash -e
 
+export KUBECONFIG=${KUBECONFIG:-$HOME/.kube/config}
 MOUNT_POINT=${1-/mnt/kube-nfs}
 
 echo "[*] Shutting down local NFS servers (to free ports)"
 sudo service nfs-kernel-server stop || true
 sudo service rpcbind stop || true
 
+NFS_SERVER=${NFS_SERVER:-$(kubectl describe pv $(kubectl get pv | grep nfs- | head -n1 | awk '{print $1}') | grep Server | awk '{print $2}')}
+NFS_PATH=${NFS_PATH:-$(kubectl describe pv $(kubectl get pv | grep nfs- | head -n1 | awk '{print $1}') | grep Path | awk '{print $2}')}
+
+cat <<END >/tmp/nfs_fwd-$$.yml
+apiVersion: v1
+kind: Pod
+metadata:
+  name: nfs-forwarder
+  labels:
+    role: nfs-server
+spec:
+  containers:
+    - name: nfs
+      command: [ "socat", "tcp-listen:2049,fork,reuseaddr", "tcp-connect:$NFS_SERVER:2049" ]
+      image: alpine/socat
+  restartPolicy: OnFailure
+---
+kind: Service
+apiVersion: v1
+metadata:
+  name: nfs-service
+spec:
+  ports:
+    - name: nfs
+      port: 2049
+  selector:
+    role: nfs-server
+END
+
+
 echo "[*] Forwarding NFS ports to kubernetes"
-sudo --preserve-env=KUBECONFIG kubectl --namespace=default port-forward service/nfs-service 2049 20048 111 &
+kubectl delete -f /tmp/nfs_fwd-$$.yml || true
+kubectl create -f /tmp/nfs_fwd-$$.yml
+kubectl wait --for=condition=ready pod/nfs-forwarder
+kubectl port-forward service/nfs-service 2049 &
+FORWARDER=$!
+
 sleep 5
 
 echo "[*] Mounting NFS share at $MOUNT_POINT"
 sudo mkdir -p $MOUNT_POINT
-sudo mount 127.0.0.1:/exports/results $MOUNT_POINT
+sudo mount 127.0.0.1:$NFS_PATH $MOUNT_POINT
 
-echo "[*] NFS share mounted at $MOUNT_POINT. Press Ctrl-C to unmount and disable mapping"
-trap 'echo "[*] Unmounting $MOUNT_POINT"; sudo umount $MOUNT_POINT' EXIT
-wait
+echo "[*] NFS share mounted at $MOUNT_POINT. Press enter to unmount and disable mapping"
+read a
+echo "[*] Unmounting $MOUNT_POINT"
+sudo umount $MOUNT_POINT
+echo [*] Stopping port forwards.
+kill $FORWARDER
+echo [*] Deleting forwarding service and pod.
+kubectl delete -f /tmp/nfs_fwd-$$.yml
