@@ -53,7 +53,7 @@ metadata:
 spec:
   capacity:
     storage: 1Mi
-  storageClassName: standard
+  storageClassName: nfs-client
   accessModes:
     - ReadWriteMany
   nfs:
@@ -74,6 +74,7 @@ spec:
     requests:
       storage: 1Mi
   volumeName: nfs-$NAMESPACE
+  storageClassName: nfs-client
 END
 
 kubectl delete -n $NAMESPACE -f $WORKDIR/setup/nfs_pvc_$NAMESPACE.yml || echo "[+] No PVC to delete..."
