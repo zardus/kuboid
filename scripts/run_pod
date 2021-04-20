@@ -1,9 +1,15 @@
 #!/bin/bash -u
 
+SHARED_PATH=${SHARED_PATH-/shared}
+
+TTY=${TTY-false}
+INOPT="-i"
+
+[ $TTY == "true" ] && INOPT="-it"
+
 # first, get the freaking json
 ORIGINAL_JSON=$(kubectl run --restart Never --dry-run=client -o json "$@")
-MODIFIED_JSON=$(echo $ORIGINAL_JSON | jq '.spec.containers[] += {volumeMounts: [ {name: "nfs", mountPath: "/shared"} ], stdin: true, tty: true}' | jq '.spec += {volumes: [ {name: "nfs", persistentVolumeClaim: { claimName: "nfs" } } ] }')
+MODIFIED_JSON=$(echo $ORIGINAL_JSON | jq '.spec.containers[] += {volumeMounts: [ {name: "nfs", mountPath: "'"$SHARED_PATH"'"} ], stdin: true, tty: '$TTY'}' | jq '.spec += {volumes: [ {name: "nfs", persistentVolumeClaim: { claimName: "nfs" } } ], imagePullSecrets: [ { name: "docker-secret" } ] }')
 
 # now launch!
-
-exec kubectl run --pod-running-timeout=999h --restart=Never -it --rm --overrides="$MODIFIED_JSON" "$@"
+exec kubectl run --pod-running-timeout=999h --restart=Never $INOPT --rm --overrides="$MODIFIED_JSON" "$@"
